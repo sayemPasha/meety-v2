@@ -19,7 +19,73 @@ interface PlaceResult {
   };
 }
 
-// Calculate the geographic center (centroid) of all user locations
+/**
+ * Calculate the center point between multiple locations using simple average
+ * @param locations Array of lat/lng objects
+ * @returns The center point as lat/lng object
+ */
+export function calculateCenter(locations: Array<{ lat: number; lng: number }>) {
+  if (locations.length === 0) {
+    return null;
+  }
+  
+  if (locations.length === 1) {
+    return locations[0];
+  }
+  
+  let totalLat = 0;
+  let totalLng = 0;
+  
+  for (const location of locations) {
+    totalLat += location.lat;
+    totalLng += location.lng;
+  }
+  
+  return {
+    lat: totalLat / locations.length,
+    lng: totalLng / locations.length,
+  };
+}
+
+/**
+ * Calculate the median point between multiple locations
+ * This is more accurate than a simple average for finding a truly central point
+ * @param locations Array of lat/lng objects
+ * @returns The median point as lat/lng object
+ */
+export function calculateMedianPoint(locations: Array<{ lat: number; lng: number }>) {
+  if (locations.length === 0) {
+    return null;
+  }
+  
+  if (locations.length === 1) {
+    return locations[0];
+  }
+  
+  // Sort latitudes and longitudes separately
+  const lats = locations.map(loc => loc.lat).sort((a, b) => a - b);
+  const lngs = locations.map(loc => loc.lng).sort((a, b) => a - b);
+  
+  let medianLat, medianLng;
+  const mid = Math.floor(locations.length / 2);
+  
+  if (locations.length % 2 === 0) {
+    // Even number of points
+    medianLat = (lats[mid - 1] + lats[mid]) / 2;
+    medianLng = (lngs[mid - 1] + lngs[mid]) / 2;
+  } else {
+    // Odd number of points
+    medianLat = lats[mid];
+    medianLng = lngs[mid];
+  }
+  
+  return {
+    lat: medianLat,
+    lng: medianLng,
+  };
+}
+
+// Calculate the geographic center (centroid) of all user locations using median point
 export function calculateCentroid(users: User[]): Location {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
@@ -27,23 +93,23 @@ export function calculateCentroid(users: User[]): Location {
     throw new Error('No connected users with locations');
   }
 
-  let totalLat = 0;
-  let totalLng = 0;
+  // Extract locations for median calculation
+  const locations = connectedUsers.map(user => ({
+    lat: user.location!.lat,
+    lng: user.location!.lng
+  }));
 
-  connectedUsers.forEach(user => {
-    if (user.location) {
-      totalLat += user.location.lat;
-      totalLng += user.location.lng;
-    }
-  });
-
-  const centroidLat = totalLat / connectedUsers.length;
-  const centroidLng = totalLng / connectedUsers.length;
+  // Use median point calculation for more accurate center
+  const medianPoint = calculateMedianPoint(locations);
+  
+  if (!medianPoint) {
+    throw new Error('Could not calculate median point');
+  }
 
   return {
-    lat: centroidLat,
-    lng: centroidLng,
-    address: `${centroidLat.toFixed(4)}, ${centroidLng.toFixed(4)} (Center Point)`
+    lat: medianPoint.lat,
+    lng: medianPoint.lng,
+    address: `${medianPoint.lat.toFixed(4)}, ${medianPoint.lng.toFixed(4)} (Optimal Center Point)`
   };
 }
 
@@ -135,9 +201,9 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
     activity: u.activity
   })));
 
-  // Calculate the centroid (optimal meeting point)
-  const centroid = calculateCentroid(users);
-  console.log('📍 Calculated centroid:', centroid);
+  // Calculate the median point (optimal meeting point)
+  const optimalPoint = calculateCentroid(users);
+  console.log('📍 Calculated optimal meeting point (median):', optimalPoint);
   
   // Get preferred activity types
   const preferredActivities = getPreferredActivityTypes(users);
@@ -156,7 +222,7 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
       for (const activityType of preferredActivities.slice(0, 3)) {
         const placesForActivity = await searchGooglePlaces(
           placesService, 
-          centroid, 
+          optimalPoint, 
           getGooglePlacesType(activityType),
           activityType,
           users
@@ -168,7 +234,7 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
       if (suggestions.length < 3) {
         const restaurantPlaces = await searchGooglePlaces(
           placesService,
-          centroid,
+          optimalPoint,
           'restaurant',
           'restaurant',
           users
@@ -177,11 +243,11 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
       }
     } catch (error) {
       console.error('Google Places API error, falling back to mock data:', error);
-      return generateMockSuggestions(users, centroid, preferredActivities);
+      return generateMockSuggestions(users, optimalPoint, preferredActivities);
     }
   } else {
     console.log('Google Places API not available, using mock data');
-    return generateMockSuggestions(users, centroid, preferredActivities);
+    return generateMockSuggestions(users, optimalPoint, preferredActivities);
   }
 
   // Sort by average distance (closest first) and rating
@@ -195,7 +261,7 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
     })
     .slice(0, 5); // Return top 5 suggestions
 
-  console.log('✨ Final suggestions:', sortedSuggestions);
+  console.log('✨ Final suggestions (sorted by median point optimization):', sortedSuggestions);
   return sortedSuggestions;
 }
 
@@ -264,20 +330,20 @@ function searchGooglePlaces(
 // Fallback mock suggestions when Google Places API is not available
 function generateMockSuggestions(
   users: User[], 
-  centroid: Location, 
+  optimalPoint: Location, 
   preferredActivities: string[]
 ): MeetupSuggestion[] {
   const suggestions: MeetupSuggestion[] = [];
   
   // Create suggestions for each preferred activity type
   for (const activityType of preferredActivities.slice(0, 3)) {
-    const placesForActivity = generateMockPlaces(centroid, activityType, users);
+    const placesForActivity = generateMockPlaces(optimalPoint, activityType, users);
     suggestions.push(...placesForActivity);
   }
 
   // If we don't have enough suggestions, add some general ones
   if (suggestions.length < 3) {
-    const generalPlaces = generateMockPlaces(centroid, 'restaurant', users);
+    const generalPlaces = generateMockPlaces(optimalPoint, 'restaurant', users);
     suggestions.push(...generalPlaces.slice(0, 3 - suggestions.length));
   }
 
@@ -358,7 +424,7 @@ function generateMockPlaces(centerLocation: Location, activityType: string, user
   });
 }
 
-// Calculate the optimal meeting point using weighted centroid
+// Calculate the optimal meeting point using median point calculation
 export function calculateOptimalMeetingPoint(users: User[]): Location {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
@@ -366,11 +432,7 @@ export function calculateOptimalMeetingPoint(users: User[]): Location {
     throw new Error('No connected users with locations');
   }
 
-  // For now, use simple centroid. In advanced version, we could weight by:
-  // - Travel time/distance preferences
-  // - Transportation methods
-  // - User priorities
-  
+  // Use median point calculation for more accurate results
   return calculateCentroid(users);
 }
 
