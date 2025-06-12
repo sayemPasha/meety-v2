@@ -316,13 +316,8 @@ watch(users, () => {
   // This will trigger reactivity for positions
 }, { deep: true });
 
-// Watch for new meetup suggestions
-watch(meetupSuggestions, (newSuggestions) => {
-  if (newSuggestions.length > 0 && !showMeetupModal.value) {
-    // Auto-show modal when new suggestions are available
-    showMeetupModal.value = true;
-  }
-}, { deep: true });
+// REMOVED: Auto-show modal when suggestions change
+// This was causing the auto-popup issue when users joined via link
 
 // Emits
 const emit = defineEmits<{
