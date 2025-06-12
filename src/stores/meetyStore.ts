@@ -14,6 +14,7 @@ export const useMeetyStore = defineStore('meety', () => {
   const error = ref<string | null>(null);
   const realtimeChannel = ref<RealtimeChannel | null>(null);
   const lastSuggestionHash = ref<string>(''); // Track when suggestions need updating
+  const lastUserCount = ref<number>(0); // Track user count changes
 
   // Computed properties
   const connectedUsers = computed(() => 
@@ -35,17 +36,56 @@ export const useMeetyStore = defineStore('meety', () => {
 
   // Generate a hash of user locations and activities to detect changes
   const getUserConfigHash = () => {
-    const connectedUsersData = connectedUsers.value
-      .filter(user => user.location && user.activity)
+    const allUsers = currentSession.value?.users || [];
+    const userData = allUsers
       .map(user => ({
         id: user.id,
-        lat: user.location?.lat,
-        lng: user.location?.lng,
-        activity: user.activity
+        connected: user.connected,
+        lat: user.location?.lat || null,
+        lng: user.location?.lng || null,
+        activity: user.activity || null
       }))
       .sort((a, b) => a.id.localeCompare(b.id)); // Sort for consistent hash
     
-    return JSON.stringify(connectedUsersData);
+    return JSON.stringify(userData);
+  };
+
+  // Check if suggestions need to be cleared
+  const checkAndClearSuggestions = async (sessionId: string) => {
+    if (!currentSession.value) return;
+
+    const currentHash = getUserConfigHash();
+    const currentUserCount = currentSession.value.users.length;
+    
+    // Clear suggestions if:
+    // 1. User configuration changed (locations, activities, connection status)
+    // 2. Number of users changed (new user joined)
+    // 3. We have existing suggestions but config is different
+    const shouldClear = (
+      currentHash !== lastSuggestionHash.value || 
+      currentUserCount !== lastUserCount.value ||
+      (currentSession.value.meetupSuggestions.length > 0 && lastSuggestionHash.value === '')
+    );
+
+    if (shouldClear) {
+      console.log('🔄 Configuration changed, clearing suggestions...');
+      console.log('Hash changed:', currentHash !== lastSuggestionHash.value);
+      console.log('User count changed:', currentUserCount !== lastUserCount.value);
+      console.log('Previous hash:', lastSuggestionHash.value);
+      console.log('Current hash:', currentHash);
+      console.log('Previous user count:', lastUserCount.value);
+      console.log('Current user count:', currentUserCount);
+      
+      // Clear suggestions from database
+      await clearMeetupSuggestions(sessionId);
+      
+      // Clear local suggestions
+      currentSession.value.meetupSuggestions = [];
+      lastSuggestionHash.value = '';
+    }
+
+    // Update tracking values
+    lastUserCount.value = currentUserCount;
   };
 
   // Real-time subscription setup
@@ -68,16 +108,8 @@ export const useMeetyStore = defineStore('meety', () => {
           console.log('Real-time session_users update:', payload);
           await loadSessionData(sessionId);
           
-          // Check if we need to clear suggestions due to user changes
-          const newHash = getUserConfigHash();
-          if (newHash !== lastSuggestionHash.value && currentSession.value) {
-            console.log('🔄 User configuration changed, clearing old suggestions');
-            // Clear suggestions from database
-            await clearMeetupSuggestions(sessionId);
-            // Clear local suggestions
-            currentSession.value.meetupSuggestions = [];
-            lastSuggestionHash.value = '';
-          }
+          // Check if we need to clear suggestions
+          await checkAndClearSuggestions(sessionId);
         }
       )
       .on(
@@ -107,7 +139,7 @@ export const useMeetyStore = defineStore('meety', () => {
       if (deleteError) {
         console.error('Error clearing meetup suggestions:', deleteError);
       } else {
-        console.log('✅ Cleared old meetup suggestions');
+        console.log('✅ Cleared old meetup suggestions from database');
       }
     } catch (err) {
       console.error('Error clearing suggestions:', err);
@@ -184,6 +216,9 @@ export const useMeetyStore = defineStore('meety', () => {
       if (suggestions.length > 0) {
         lastSuggestionHash.value = getUserConfigHash();
       }
+
+      // Update user count tracking
+      lastUserCount.value = users.length;
 
     } catch (err) {
       console.error('Error loading session data:', err);
@@ -281,7 +316,7 @@ export const useMeetyStore = defineStore('meety', () => {
     try {
       isLoading.value = true;
 
-      // Load existing session data
+      // Load existing session data first
       await loadSessionData(sessionId);
 
       if (!currentSession.value) {
@@ -311,6 +346,14 @@ export const useMeetyStore = defineStore('meety', () => {
       
       // Setup real-time subscription
       setupRealtimeSubscription(sessionId);
+
+      // Clear any existing suggestions since a new user joined
+      console.log('🆕 New user joined, clearing existing suggestions');
+      await clearMeetupSuggestions(sessionId);
+      if (currentSession.value) {
+        currentSession.value.meetupSuggestions = [];
+      }
+      lastSuggestionHash.value = '';
 
     } catch (err) {
       console.error('Error joining session:', err);
@@ -412,17 +455,10 @@ export const useMeetyStore = defineStore('meety', () => {
     try {
       console.log('🎯 Starting meetup suggestion generation...');
       
-      // Check if suggestions are already up to date
-      const currentHash = getUserConfigHash();
-      if (currentHash === lastSuggestionHash.value && currentSession.value.meetupSuggestions.length > 0) {
-        console.log('✅ Suggestions are already up to date');
-        isLoading.value = false;
-        return;
-      }
-
-      // Clear existing suggestions first
+      // Always clear existing suggestions to ensure fresh results
       console.log('🧹 Clearing existing suggestions...');
       await clearMeetupSuggestions(currentSession.value.id);
+      currentSession.value.meetupSuggestions = [];
 
       console.log('🎯 Calculating optimal meetup locations...');
       console.log('Connected users:', connectedUsers.value.map(u => ({
@@ -468,7 +504,10 @@ export const useMeetyStore = defineStore('meety', () => {
       console.log('✅ Suggestions saved successfully');
       
       // Update the hash to mark suggestions as current
-      lastSuggestionHash.value = currentHash;
+      lastSuggestionHash.value = getUserConfigHash();
+
+      // Reload suggestions to get them with proper IDs
+      await loadMeetupSuggestions(currentSession.value.id);
 
     } catch (err) {
       console.error('Error generating meetup suggestions:', err);
