@@ -24,6 +24,20 @@ declare namespace google {
       geocode(request: GeocoderRequest, callback: (results: GeocoderResult[] | null, status: GeocoderStatus) => void): void;
     }
 
+    class LatLng {
+      constructor(lat: number, lng: number);
+      lat(): number;
+      lng(): number;
+    }
+
+    class Size {
+      constructor(width: number, height: number);
+    }
+
+    class Point {
+      constructor(x: number, y: number);
+    }
+
     interface MapOptions {
       zoom?: number;
       center?: LatLng | LatLngLiteral;
@@ -46,25 +60,12 @@ declare namespace google {
       anchor?: Point;
     }
 
-    interface LatLng {
-      lat(): number;
-      lng(): number;
-    }
-
     interface LatLngLiteral {
       lat: number;
       lng: number;
     }
 
     interface LatLngBounds {}
-
-    interface Size {
-      constructor(width: number, height: number): Size;
-    }
-
-    interface Point {
-      constructor(x: number, y: number): Point;
-    }
 
     interface MapMouseEvent {
       latLng?: LatLng;
@@ -93,6 +94,12 @@ declare namespace google {
     type GeocoderStatus = 'OK' | 'ZERO_RESULTS' | 'OVER_QUERY_LIMIT' | 'REQUEST_DENIED' | 'INVALID_REQUEST' | 'UNKNOWN_ERROR';
 
     namespace places {
+      class PlacesService {
+        constructor(attrContainer: HTMLDivElement | Map);
+        nearbySearch(request: PlaceSearchRequest, callback: (results: PlaceResult[] | null, status: PlacesServiceStatus) => void): void;
+        getDetails(request: PlaceDetailsRequest, callback: (result: PlaceResult | null, status: PlacesServiceStatus) => void): void;
+      }
+
       class SearchBox {
         constructor(inputField: HTMLInputElement);
         setBounds(bounds: LatLngBounds): void;
@@ -100,12 +107,48 @@ declare namespace google {
         addListener(eventName: string, handler: Function): MapsEventListener;
       }
 
+      interface PlaceSearchRequest {
+        location?: LatLng;
+        radius?: number;
+        type?: string;
+        keyword?: string;
+        openNow?: boolean;
+      }
+
+      interface PlaceDetailsRequest {
+        placeId: string;
+        fields?: string[];
+      }
+
       interface PlaceResult {
-        formatted_address?: string;
+        place_id?: string;
         name?: string;
+        formatted_address?: string;
+        vicinity?: string;
         geometry?: {
           location?: LatLng;
         };
+        rating?: number;
+        price_level?: number;
+        opening_hours?: {
+          open_now?: boolean;
+        };
+        photos?: PlacePhoto[];
+        types?: string[];
+      }
+
+      interface PlacePhoto {
+        getUrl(opts: { maxWidth?: number; maxHeight?: number }): string;
+      }
+
+      enum PlacesServiceStatus {
+        OK = 'OK',
+        ZERO_RESULTS = 'ZERO_RESULTS',
+        OVER_QUERY_LIMIT = 'OVER_QUERY_LIMIT',
+        REQUEST_DENIED = 'REQUEST_DENIED',
+        INVALID_REQUEST = 'INVALID_REQUEST',
+        NOT_FOUND = 'NOT_FOUND',
+        UNKNOWN_ERROR = 'UNKNOWN_ERROR'
       }
     }
   }

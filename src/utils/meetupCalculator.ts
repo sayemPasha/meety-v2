@@ -12,6 +12,11 @@ interface PlaceResult {
   location: Location;
   rating: number;
   place_id?: string;
+  photo_url?: string;
+  price_level?: number;
+  opening_hours?: {
+    open_now?: boolean;
+  };
 }
 
 // Calculate the geographic center (centroid) of all user locations
@@ -100,7 +105,23 @@ export function getPreferredActivityTypes(users: User[]): string[] {
     .map(([activity]) => activity);
 }
 
-// Generate meetup suggestions based on user locations and preferences
+// Convert activity type to Google Places type
+function getGooglePlacesType(activityType: string): string {
+  const typeMapping: { [key: string]: string } = {
+    restaurant: 'restaurant',
+    outdoor: 'park',
+    sports: 'gym',
+    entertainment: 'movie_theater',
+    shopping: 'shopping_mall',
+    coffee: 'cafe',
+    culture: 'museum',
+    nightlife: 'night_club'
+  };
+  
+  return typeMapping[activityType] || 'restaurant';
+}
+
+// Generate meetup suggestions using Google Places API
 export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSuggestion[]> {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
@@ -108,24 +129,155 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
     throw new Error('Need at least 2 connected users to generate suggestions');
   }
 
+  console.log('🎯 Generating meetup suggestions for users:', connectedUsers.map(u => ({
+    name: u.name,
+    location: u.location,
+    activity: u.activity
+  })));
+
   // Calculate the centroid (optimal meeting point)
   const centroid = calculateCentroid(users);
+  console.log('📍 Calculated centroid:', centroid);
   
   // Get preferred activity types
   const preferredActivities = getPreferredActivityTypes(users);
+  console.log('🎨 Preferred activities:', preferredActivities);
   
-  // Generate suggestions around the centroid
+  const suggestions: MeetupSuggestion[] = [];
+  
+  // Use Google Places API if available, otherwise fallback to mock data
+  if (window.google && window.google.maps && window.google.maps.places) {
+    try {
+      const placesService = new google.maps.places.PlacesService(
+        document.createElement('div')
+      );
+      
+      // Search for places for each preferred activity type
+      for (const activityType of preferredActivities.slice(0, 3)) {
+        const placesForActivity = await searchGooglePlaces(
+          placesService, 
+          centroid, 
+          getGooglePlacesType(activityType),
+          activityType,
+          users
+        );
+        suggestions.push(...placesForActivity);
+      }
+      
+      // If we don't have enough suggestions, add restaurants as fallback
+      if (suggestions.length < 3) {
+        const restaurantPlaces = await searchGooglePlaces(
+          placesService,
+          centroid,
+          'restaurant',
+          'restaurant',
+          users
+        );
+        suggestions.push(...restaurantPlaces.slice(0, 3 - suggestions.length));
+      }
+    } catch (error) {
+      console.error('Google Places API error, falling back to mock data:', error);
+      return generateMockSuggestions(users, centroid, preferredActivities);
+    }
+  } else {
+    console.log('Google Places API not available, using mock data');
+    return generateMockSuggestions(users, centroid, preferredActivities);
+  }
+
+  // Sort by average distance (closest first) and rating
+  const sortedSuggestions = suggestions
+    .sort((a, b) => {
+      const distanceDiff = a.averageDistance - b.averageDistance;
+      if (Math.abs(distanceDiff) < 0.5) { // If distances are similar, prefer higher rating
+        return b.rating - a.rating;
+      }
+      return distanceDiff;
+    })
+    .slice(0, 5); // Return top 5 suggestions
+
+  console.log('✨ Final suggestions:', sortedSuggestions);
+  return sortedSuggestions;
+}
+
+// Search Google Places API
+function searchGooglePlaces(
+  placesService: google.maps.places.PlacesService,
+  location: Location,
+  placeType: string,
+  activityType: string,
+  users: User[]
+): Promise<MeetupSuggestion[]> {
+  return new Promise((resolve) => {
+    const request: google.maps.places.PlaceSearchRequest = {
+      location: new google.maps.LatLng(location.lat, location.lng),
+      radius: 5000, // 5km radius
+      type: placeType as any,
+      openNow: false
+    };
+
+    placesService.nearbySearch(request, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        const suggestions = results.slice(0, 3).map(place => {
+          const placeLocation = {
+            lat: place.geometry?.location?.lat() || location.lat,
+            lng: place.geometry?.location?.lng() || location.lng,
+            address: place.vicinity || place.formatted_address || 'Unknown address'
+          };
+
+          const averageDistance = calculateAverageDistance(placeLocation, users);
+          
+          // Get photo URL if available
+          let photoUrl = '';
+          if (place.photos && place.photos.length > 0) {
+            photoUrl = place.photos[0].getUrl({ maxWidth: 400, maxHeight: 300 });
+          }
+
+          return {
+            id: place.place_id || `${place.name?.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+            name: place.name || 'Unknown Place',
+            type: activityType,
+            location: placeLocation,
+            rating: place.rating || 4.0,
+            distance: calculateDistance(
+              location.lat,
+              location.lng,
+              placeLocation.lat,
+              placeLocation.lng
+            ),
+            averageDistance,
+            placeId: place.place_id,
+            photoUrl,
+            priceLevel: place.price_level,
+            openNow: place.opening_hours?.open_now
+          };
+        });
+        
+        resolve(suggestions);
+      } else {
+        console.error('Places search failed:', status);
+        resolve([]);
+      }
+    });
+  });
+}
+
+// Fallback mock suggestions when Google Places API is not available
+function generateMockSuggestions(
+  users: User[], 
+  centroid: Location, 
+  preferredActivities: string[]
+): MeetupSuggestion[] {
   const suggestions: MeetupSuggestion[] = [];
   
   // Create suggestions for each preferred activity type
-  for (const activityType of preferredActivities.slice(0, 3)) { // Top 3 activities
-    const placesForActivity = await findPlacesNearLocation(centroid, activityType, users);
+  for (const activityType of preferredActivities.slice(0, 3)) {
+    const placesForActivity = generateMockPlaces(centroid, activityType, users);
     suggestions.push(...placesForActivity);
   }
 
   // If we don't have enough suggestions, add some general ones
   if (suggestions.length < 3) {
-    const generalPlaces = await findPlacesNearLocation(centroid, 'restaurant', users);
+    const generalPlaces = generateMockPlaces(centroid, 'restaurant', users);
     suggestions.push(...generalPlaces.slice(0, 3 - suggestions.length));
   }
 
@@ -141,41 +293,8 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
     .slice(0, 5); // Return top 5 suggestions
 }
 
-// Mock function to find places near a location (in a real app, this would use Google Places API)
-async function findPlacesNearLocation(
-  location: Location, 
-  activityType: string, 
-  users: User[]
-): Promise<MeetupSuggestion[]> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 200));
-
-  // Mock places data based on activity type
-  const mockPlaces = generateMockPlaces(location, activityType);
-  
-  // Calculate distances and create suggestions
-  return mockPlaces.map(place => {
-    const averageDistance = calculateAverageDistance(place.location, users);
-    
-    return {
-      id: `${place.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-      name: place.name,
-      type: activityType,
-      location: place.location,
-      rating: place.rating,
-      distance: calculateDistance(
-        location.lat, 
-        location.lng, 
-        place.location.lat, 
-        place.location.lng
-      ),
-      averageDistance
-    };
-  });
-}
-
 // Generate mock places around a location
-function generateMockPlaces(centerLocation: Location, activityType: string): PlaceResult[] {
+function generateMockPlaces(centerLocation: Location, activityType: string, users: User[]): MeetupSuggestion[] {
   const placeTemplates = {
     restaurant: [
       'Central Bistro', 'The Meeting Place', 'Midpoint Café', 'Fusion Kitchen', 'Corner Table'
@@ -214,15 +333,27 @@ function generateMockPlaces(centerLocation: Location, activityType: string): Pla
     const lat = centerLocation.lat + (distance * Math.cos(angle));
     const lng = centerLocation.lng + (distance * Math.sin(angle));
     
+    const location = {
+      lat,
+      lng,
+      address: `${name}, ${lat.toFixed(4)}, ${lng.toFixed(4)}`
+    };
+
+    const averageDistance = calculateAverageDistance(location, users);
+    
     return {
+      id: `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${index}`,
       name,
       type: activityType,
-      location: {
+      location,
+      rating: 3.5 + (Math.random() * 1.5), // Rating between 3.5 and 5.0
+      distance: calculateDistance(
+        centerLocation.lat,
+        centerLocation.lng,
         lat,
-        lng,
-        address: `${name}, ${lat.toFixed(4)}, ${lng.toFixed(4)}`
-      },
-      rating: 3.5 + (Math.random() * 1.5) // Rating between 3.5 and 5.0
+        lng
+      ),
+      averageDistance
     };
   });
 }

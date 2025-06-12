@@ -30,6 +30,10 @@ export interface MeetupSuggestion {
   rating: number;
   distance: number;
   averageDistance: number;
+  placeId?: string;
+  photoUrl?: string;
+  priceLevel?: number;
+  openNow?: boolean;
 }
 
 export interface ActivityType {

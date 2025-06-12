@@ -62,7 +62,7 @@
       @click="showMeetupModal = false"
     >
       <div 
-        class="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl"
+        class="bg-white rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden shadow-2xl"
         @click.stop
       >
         <div class="p-6 border-b border-gray-200">
@@ -74,33 +74,104 @@
           <div
             v-for="suggestion in meetupSuggestions"
             :key="suggestion.id"
-            class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-200"
           >
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <h3 class="font-semibold text-lg text-gray-800 mb-1">{{ suggestion.name }}</h3>
-                <p class="text-gray-600 text-sm mb-2">{{ suggestion.location.address }}</p>
-                <div class="flex items-center space-x-4 text-sm">
-                  <span class="flex items-center space-x-1">
-                    <span class="text-yellow-500">⭐</span>
-                    <span class="font-medium">{{ suggestion.rating }}</span>
-                  </span>
-                  <span class="flex items-center space-x-1">
-                    <span class="text-blue-500">📍</span>
-                    <span>{{ suggestion.averageDistance }}km avg</span>
-                  </span>
+            <div class="flex items-start space-x-4">
+              <!-- Place Photo -->
+              <div class="flex-shrink-0">
+                <div 
+                  v-if="suggestion.photoUrl"
+                  class="w-24 h-24 rounded-lg overflow-hidden shadow-md"
+                >
+                  <img 
+                    :src="suggestion.photoUrl" 
+                    :alt="suggestion.name"
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+                <div 
+                  v-else
+                  class="w-24 h-24 rounded-lg bg-gradient-to-br from-cosmic-100 to-space-100 flex items-center justify-center shadow-md"
+                >
+                  <span class="text-3xl">{{ getActivityIcon(suggestion.type) }}</span>
                 </div>
               </div>
-              <div class="text-2xl ml-4">
-                {{ getActivityIcon(suggestion.type) }}
+
+              <!-- Place Details -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between mb-2">
+                  <h3 class="font-semibold text-xl text-gray-800 truncate">{{ suggestion.name }}</h3>
+                  <div class="flex items-center space-x-2 ml-4">
+                    <!-- Rating -->
+                    <div class="flex items-center space-x-1 bg-yellow-50 px-2 py-1 rounded-lg">
+                      <span class="text-yellow-500">⭐</span>
+                      <span class="font-medium text-sm">{{ suggestion.rating.toFixed(1) }}</span>
+                    </div>
+                    <!-- Price Level -->
+                    <div v-if="suggestion.priceLevel" class="flex items-center bg-green-50 px-2 py-1 rounded-lg">
+                      <span class="text-green-600 text-sm font-medium">
+                        {{ '$'.repeat(suggestion.priceLevel) }}
+                      </span>
+                    </div>
+                    <!-- Open Now -->
+                    <div v-if="suggestion.openNow !== undefined" class="flex items-center px-2 py-1 rounded-lg"
+                         :class="suggestion.openNow ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'">
+                      <span class="text-xs font-medium">
+                        {{ suggestion.openNow ? 'Open Now' : 'Closed' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ suggestion.location.address }}</p>
+                
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-4 text-sm">
+                    <span class="flex items-center space-x-1">
+                      <span class="text-blue-500">📍</span>
+                      <span>{{ suggestion.averageDistance.toFixed(1) }}km avg distance</span>
+                    </span>
+                    <span class="flex items-center space-x-1">
+                      <span class="text-purple-500">🎯</span>
+                      <span>{{ getActivityName(suggestion.type) }}</span>
+                    </span>
+                  </div>
+                  
+                  <!-- Action Buttons -->
+                  <div class="flex items-center space-x-2">
+                    <button
+                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                      @click="openInMaps(suggestion)"
+                    >
+                      📍 Open in Maps
+                    </button>
+                    <button
+                      v-if="suggestion.placeId"
+                      class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+                      @click="viewPlaceDetails(suggestion)"
+                    >
+                      ℹ️ Details
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+
+          <!-- No suggestions message -->
+          <div v-if="meetupSuggestions.length === 0" class="text-center py-8">
+            <div class="text-6xl mb-4">🤔</div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">No suggestions yet</h3>
+            <p class="text-gray-600">Make sure all users have set their locations and activities.</p>
+          </div>
         </div>
         
-        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+          <div class="text-sm text-gray-600">
+            Showing {{ meetupSuggestions.length }} suggestion{{ meetupSuggestions.length !== 1 ? 's' : '' }}
+          </div>
           <button
-            class="w-full bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+            class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
             @click="showMeetupModal = false"
           >
             Close
@@ -150,8 +221,11 @@ const getUserPosition = (index: number) => {
 
 const handleCenterNodeClick = async () => {
   if (canGenerateMeetups.value) {
+    console.log('🎯 Center node clicked - generating meetup suggestions...');
     await store.generateMeetupSuggestions();
     showMeetupModal.value = true;
+  } else {
+    console.log('❌ Cannot generate meetups yet - need more connected users with locations and activities');
   }
 };
 
@@ -165,6 +239,34 @@ const handleUserNodeClick = (user: any) => {
 const getActivityIcon = (type: string) => {
   const activity = ACTIVITY_TYPES.find(a => a.id === type);
   return activity?.icon || '📍';
+};
+
+const getActivityName = (type: string) => {
+  const activity = ACTIVITY_TYPES.find(a => a.id === type);
+  return activity?.name || 'Unknown';
+};
+
+const openInMaps = (suggestion: any) => {
+  const { lat, lng } = suggestion.location;
+  const query = encodeURIComponent(suggestion.name);
+  
+  // Try to open in Google Maps with place ID if available
+  let mapsUrl = '';
+  if (suggestion.placeId) {
+    mapsUrl = `https://www.google.com/maps/place/?q=place_id:${suggestion.placeId}`;
+  } else {
+    // Fallback to coordinates and name
+    mapsUrl = `https://www.google.com/maps/search/${query}/@${lat},${lng},15z`;
+  }
+  
+  window.open(mapsUrl, '_blank');
+};
+
+const viewPlaceDetails = (suggestion: any) => {
+  if (suggestion.placeId) {
+    const detailsUrl = `https://www.google.com/maps/place/?q=place_id:${suggestion.placeId}`;
+    window.open(detailsUrl, '_blank');
+  }
 };
 
 const updateContainerSize = () => {
@@ -190,6 +292,14 @@ watch(users, () => {
   // This will trigger reactivity for positions
 }, { deep: true });
 
+// Watch for new meetup suggestions
+watch(meetupSuggestions, (newSuggestions) => {
+  if (newSuggestions.length > 0 && !showMeetupModal.value) {
+    // Auto-show modal when new suggestions are available
+    showMeetupModal.value = true;
+  }
+}, { deep: true });
+
 // Emits
 const emit = defineEmits<{
   showUserSetup: []
@@ -197,5 +307,10 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
-/* Removed all connection-related styles for cleaner look */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 </style>
