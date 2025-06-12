@@ -170,12 +170,22 @@
           <div class="text-sm text-gray-600">
             Showing {{ meetupSuggestions.length }} suggestion{{ meetupSuggestions.length !== 1 ? 's' : '' }}
           </div>
-          <button
-            class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
-            @click="showMeetupModal = false"
-          >
-            Close
-          </button>
+          <div class="flex items-center space-x-3">
+            <button
+              v-if="canGenerateMeetups"
+              class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200"
+              @click="refreshSuggestions"
+              :disabled="store.isLoading"
+            >
+              {{ store.isLoading ? '🔄 Refreshing...' : '🔄 Refresh' }}
+            </button>
+            <button
+              class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+              @click="showMeetupModal = false"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -222,10 +232,19 @@ const getUserPosition = (index: number) => {
 const handleCenterNodeClick = async () => {
   if (canGenerateMeetups.value) {
     console.log('🎯 Center node clicked - generating meetup suggestions...');
+    console.log('Connected users:', store.connectedUsers.map(u => ({
+      name: u.name,
+      location: u.location,
+      activity: u.activity
+    })));
+    
     await store.generateMeetupSuggestions();
     showMeetupModal.value = true;
   } else {
-    console.log('❌ Cannot generate meetups yet - need more connected users with locations and activities');
+    console.log('❌ Cannot generate meetups yet');
+    console.log('Connected users count:', store.connectedUsers.length);
+    console.log('Users with location and activity:', store.connectedUsers.filter(u => u.location && u.activity).length);
+    console.log('Requirements: Need at least 2 connected users with location and activity set');
   }
 };
 
@@ -234,6 +253,11 @@ const handleUserNodeClick = (user: any) => {
     // Emit event to parent to show location/activity selection
     emit('showUserSetup');
   }
+};
+
+const refreshSuggestions = async () => {
+  console.log('🔄 Manually refreshing suggestions...');
+  await store.generateMeetupSuggestions();
 };
 
 const getActivityIcon = (type: string) => {
