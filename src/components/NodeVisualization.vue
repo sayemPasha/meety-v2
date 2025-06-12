@@ -66,8 +66,19 @@
         @click.stop
       >
         <div class="p-6 border-b border-gray-200">
-          <h2 class="text-2xl font-bold text-gray-800 mb-2">🎯 Suggested Meetup Locations</h2>
-          <p class="text-gray-600">Based on everyone's preferences and locations</p>
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-800 mb-2">🎯 Suggested Meetup Locations</h2>
+              <p class="text-gray-600">Based on everyone's preferences and locations</p>
+            </div>
+            <!-- Outdated indicator -->
+            <div v-if="store.areSuggestionsOutdated()" class="bg-yellow-100 border border-yellow-300 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2">
+                <span class="text-yellow-600">⚠️</span>
+                <span class="text-sm text-yellow-700 font-medium">Suggestions may be outdated</span>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div class="p-6 space-y-4 max-h-96 overflow-y-auto">
@@ -163,12 +174,21 @@
             <div class="text-6xl mb-4">🤔</div>
             <h3 class="text-lg font-semibold text-gray-800 mb-2">No suggestions yet</h3>
             <p class="text-gray-600">Make sure all users have set their locations and activities.</p>
+            <button
+              v-if="canGenerateMeetups"
+              class="mt-4 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+              @click="generateSuggestions"
+              :disabled="store.isLoading"
+            >
+              {{ store.isLoading ? '🔄 Generating...' : '🎯 Generate Suggestions' }}
+            </button>
           </div>
         </div>
         
         <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
           <div class="text-sm text-gray-600">
             Showing {{ meetupSuggestions.length }} suggestion{{ meetupSuggestions.length !== 1 ? 's' : '' }}
+            <span v-if="store.areSuggestionsOutdated()" class="text-yellow-600 ml-2">(May be outdated)</span>
           </div>
           <div class="flex items-center space-x-3">
             <button
@@ -238,7 +258,7 @@ const handleCenterNodeClick = async () => {
       activity: u.activity
     })));
     
-    await store.generateMeetupSuggestions();
+    await generateSuggestions();
     showMeetupModal.value = true;
   } else {
     console.log('❌ Cannot generate meetups yet');
@@ -253,6 +273,11 @@ const handleUserNodeClick = (user: any) => {
     // Emit event to parent to show location/activity selection
     emit('showUserSetup');
   }
+};
+
+const generateSuggestions = async () => {
+  console.log('🎯 Generating fresh suggestions...');
+  await store.generateMeetupSuggestions();
 };
 
 const refreshSuggestions = async () => {
@@ -315,9 +340,6 @@ onUnmounted(() => {
 watch(users, () => {
   // This will trigger reactivity for positions
 }, { deep: true });
-
-// REMOVED: Auto-show modal when suggestions change
-// This was causing the auto-popup issue when users joined via link
 
 // Emits
 const emit = defineEmits<{
