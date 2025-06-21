@@ -51,24 +51,26 @@ export const useMeetyStore = defineStore('meety', () => {
     return JSON.stringify(userData);
   };
 
-  // Check if suggestions are outdated
+  // Check if suggestions are outdated - UPDATED LOGIC
   const areSuggestionsOutdated = () => {
     if (!currentSession.value) return false;
     
     const currentHash = getUserConfigHash();
     const hasValidSuggestions = currentSession.value.meetupSuggestions.length > 0;
+    const currentUserCount = currentSession.value.users.length;
     
     // Suggestions are outdated if:
-    // 1. We have suggestions but the hash changed
-    // 2. We have no suggestions but we should (users are ready)
-    return (hasValidSuggestions && currentHash !== lastSuggestionHash.value) ||
+    // 1. User configuration changed (location/activity)
+    // 2. Number of users changed (someone joined/left)
+    // 3. We have no suggestions but we should (users are ready)
+    return (hasValidSuggestions && (currentHash !== lastSuggestionHash.value || currentUserCount !== lastUserCount.value)) ||
            (!hasValidSuggestions && canGenerateMeetups.value && currentHash !== '');
   };
 
-  // Clear meetup suggestions from database
+  // Clear meetup suggestions from database - ALWAYS CLEAR WHEN GENERATING NEW
   const clearMeetupSuggestions = async (sessionId: string) => {
     try {
-      console.log('🧹 Clearing suggestions from database...');
+      console.log('🧹 Clearing ALL existing suggestions from database...');
       const { error: deleteError } = await supabase
         .from('meetup_suggestions')
         .delete()
@@ -78,7 +80,13 @@ export const useMeetyStore = defineStore('meety', () => {
         console.error('Error clearing meetup suggestions:', deleteError);
         throw deleteError;
       } else {
-        console.log('✅ Cleared old meetup suggestions from database');
+        console.log('✅ Successfully cleared all old meetup suggestions from database');
+      }
+      
+      // Clear local suggestions immediately
+      if (currentSession.value) {
+        currentSession.value.meetupSuggestions = [];
+        console.log('🧹 Cleared local suggestions cache');
       }
     } catch (err) {
       console.error('Error clearing suggestions:', err);
@@ -106,11 +114,9 @@ export const useMeetyStore = defineStore('meety', () => {
           console.log('Real-time session_users update:', payload);
           await loadSessionData(sessionId);
           
-          // Check if suggestions are now outdated
-          if (areSuggestionsOutdated()) {
-            console.log('🔄 User data changed, suggestions are now outdated');
-            lastSuggestionHash.value = ''; // Mark as outdated
-          }
+          // Mark suggestions as outdated when user data changes
+          console.log('🔄 User data changed, marking suggestions as outdated');
+          lastSuggestionHash.value = ''; // Mark as outdated
         }
       )
       .on(
@@ -156,7 +162,7 @@ export const useMeetyStore = defineStore('meety', () => {
         .from('meetup_suggestions')
         .select('*')
         .eq('session_id', sessionId)
-        .order('average_distance', { ascending: true });
+        .order('distance', { ascending: true }); // Order by distance to center
 
       if (suggestionsError) throw suggestionsError;
 
@@ -195,13 +201,11 @@ export const useMeetyStore = defineStore('meety', () => {
         meetupSuggestions: suggestions
       };
 
-      // Update suggestion hash if we have valid suggestions
+      // Update tracking variables
       if (suggestions.length > 0) {
         lastSuggestionHash.value = getUserConfigHash();
         console.log('📝 Updated suggestion hash:', lastSuggestionHash.value);
       }
-
-      // Update user count tracking
       lastUserCount.value = users.length;
 
     } catch (err) {
@@ -217,7 +221,7 @@ export const useMeetyStore = defineStore('meety', () => {
         .from('meetup_suggestions')
         .select('*')
         .eq('session_id', sessionId)
-        .order('average_distance', { ascending: true });
+        .order('distance', { ascending: true }); // Order by distance to center
 
       if (suggestionsError) throw suggestionsError;
 
@@ -241,6 +245,7 @@ export const useMeetyStore = defineStore('meety', () => {
         // Update hash if we have suggestions
         if (suggestions.length > 0) {
           lastSuggestionHash.value = getUserConfigHash();
+          lastUserCount.value = currentSession.value.users.length;
         }
       }
     } catch (err) {
@@ -336,9 +341,11 @@ export const useMeetyStore = defineStore('meety', () => {
       // Setup real-time subscription
       setupRealtimeSubscription(sessionId);
 
-      // Mark suggestions as outdated since a new user joined
-      console.log('🆕 New user joined, marking suggestions as outdated');
+      // CLEAR EXISTING SUGGESTIONS when new user joins
+      console.log('🆕 New user joined, clearing existing suggestions');
+      await clearMeetupSuggestions(sessionId);
       lastSuggestionHash.value = '';
+      lastUserCount.value = currentSession.value?.users.length || 0;
 
     } catch (err) {
       console.error('Error joining session:', err);
@@ -349,7 +356,7 @@ export const useMeetyStore = defineStore('meety', () => {
   };
 
   const updateUserLocation = async (location: { lat: number; lng: number; address: string }) => {
-    if (!currentUserDbId.value) return;
+    if (!currentUserDbId.value || !currentSession.value) return;
 
     try {
       const { error: updateError } = await supabase
@@ -369,9 +376,10 @@ export const useMeetyStore = defineStore('meety', () => {
         currentUser.value.location = location;
       }
 
-      // Mark suggestions as outdated
+      // CLEAR EXISTING SUGGESTIONS when user location changes
+      console.log('📍 User location updated, clearing existing suggestions');
+      await clearMeetupSuggestions(currentSession.value.id);
       lastSuggestionHash.value = '';
-      console.log('📍 User location updated, suggestions marked as outdated');
 
       await checkUserConnection();
     } catch (err) {
@@ -381,7 +389,7 @@ export const useMeetyStore = defineStore('meety', () => {
   };
 
   const updateUserActivity = async (activity: string) => {
-    if (!currentUserDbId.value) return;
+    if (!currentUserDbId.value || !currentSession.value) return;
 
     try {
       const { error: updateError } = await supabase
@@ -399,9 +407,10 @@ export const useMeetyStore = defineStore('meety', () => {
         currentUser.value.activity = activity;
       }
 
-      // Mark suggestions as outdated
+      // CLEAR EXISTING SUGGESTIONS when user activity changes
+      console.log('🎯 User activity updated, clearing existing suggestions');
+      await clearMeetupSuggestions(currentSession.value.id);
       lastSuggestionHash.value = '';
-      console.log('🎯 User activity updated, suggestions marked as outdated');
 
       await checkUserConnection();
     } catch (err) {
@@ -430,9 +439,7 @@ export const useMeetyStore = defineStore('meety', () => {
         // Update local state
         currentUser.value.connected = isConnected;
         
-        // Mark suggestions as outdated when connection status changes
-        lastSuggestionHash.value = '';
-        console.log('🔗 User connection status changed, suggestions marked as outdated');
+        console.log('🔗 User connection status changed to:', isConnected);
       } catch (err) {
         console.error('Error updating connection status:', err);
       }
@@ -458,14 +465,11 @@ export const useMeetyStore = defineStore('meety', () => {
     isLoading.value = true;
     
     try {
-      console.log('🎯 Starting meetup suggestion generation...');
+      console.log('🎯 Starting fresh meetup suggestion generation...');
       
       // ALWAYS clear existing suggestions to ensure fresh results
-      console.log('🧹 Clearing existing suggestions...');
+      console.log('🧹 Clearing existing suggestions for fresh generation...');
       await clearMeetupSuggestions(currentSession.value.id);
-      
-      // Clear local suggestions immediately
-      currentSession.value.meetupSuggestions = [];
 
       console.log('🎯 Calculating optimal meetup locations...');
       console.log('Connected users:', connectedUsers.value.map(u => ({
@@ -478,9 +482,9 @@ export const useMeetyStore = defineStore('meety', () => {
       const optimalPoint = calculateOptimalMeetingPoint(currentSession.value.users);
       console.log('📍 Optimal meeting point:', optimalPoint);
 
-      // Generate suggestions using the actual algorithm
+      // Generate suggestions using the updated algorithm
       const calculatedSuggestions = await generateMeetupSuggestions(currentSession.value.users);
-      console.log('✨ Generated suggestions:', calculatedSuggestions);
+      console.log('✨ Generated suggestions:', calculatedSuggestions.length, 'places');
       
       if (calculatedSuggestions.length === 0) {
         console.log('⚠️ No suggestions generated');
@@ -496,11 +500,11 @@ export const useMeetyStore = defineStore('meety', () => {
         location_lng: suggestion.location.lng,
         location_address: suggestion.location.address,
         rating: suggestion.rating,
-        distance: suggestion.distance,
+        distance: suggestion.distance, // Distance to center point
         average_distance: suggestion.averageDistance
       }));
 
-      console.log('💾 Saving suggestions to database...');
+      console.log('💾 Saving', suggestionsToInsert.length, 'suggestions to database...');
       const { error: insertError } = await supabase
         .from('meetup_suggestions')
         .insert(suggestionsToInsert);
@@ -509,9 +513,10 @@ export const useMeetyStore = defineStore('meety', () => {
 
       console.log('✅ Suggestions saved successfully');
       
-      // Update the hash to mark suggestions as current
+      // Update the tracking variables
       lastSuggestionHash.value = getUserConfigHash();
-      console.log('📝 Updated suggestion hash after generation:', lastSuggestionHash.value);
+      lastUserCount.value = currentSession.value.users.length;
+      console.log('📝 Updated tracking after generation');
 
       // Reload suggestions to get them with proper IDs
       await loadMeetupSuggestions(currentSession.value.id);
