@@ -67,29 +67,32 @@ export const useMeetyStore = defineStore('meety', () => {
            (!hasValidSuggestions && canGenerateMeetups.value && currentHash !== '');
   };
 
-  // Clear meetup suggestions from database - ALWAYS CLEAR WHEN GENERATING NEW
+  // Clear meetup suggestions from database - FIXED TO PROPERLY CLEAR ALL
   const clearMeetupSuggestions = async (sessionId: string) => {
     try {
-      console.log('🧹 Clearing ALL existing suggestions from database...');
-      const { error: deleteError } = await supabase
+      console.log('🧹 Clearing ALL existing suggestions from database for session:', sessionId);
+      
+      // First, clear local suggestions immediately to prevent UI showing old data
+      if (currentSession.value) {
+        currentSession.value.meetupSuggestions = [];
+        console.log('🧹 Cleared local suggestions cache immediately');
+      }
+
+      // Delete ALL suggestions for this session from database
+      const { error: deleteError, count } = await supabase
         .from('meetup_suggestions')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('session_id', sessionId);
 
       if (deleteError) {
-        console.error('Error clearing meetup suggestions:', deleteError);
+        console.error('❌ Error clearing meetup suggestions:', deleteError);
         throw deleteError;
       } else {
-        console.log('✅ Successfully cleared all old meetup suggestions from database');
+        console.log(`✅ Successfully cleared ${count || 0} old meetup suggestions from database`);
       }
       
-      // Clear local suggestions immediately
-      if (currentSession.value) {
-        currentSession.value.meetupSuggestions = [];
-        console.log('🧹 Cleared local suggestions cache');
-      }
     } catch (err) {
-      console.error('Error clearing suggestions:', err);
+      console.error('❌ Error in clearMeetupSuggestions:', err);
       throw err;
     }
   };
@@ -467,11 +470,14 @@ export const useMeetyStore = defineStore('meety', () => {
     try {
       console.log('🎯 Starting fresh meetup suggestion generation...');
       
-      // ALWAYS clear existing suggestions to ensure fresh results
-      console.log('🧹 Clearing existing suggestions for fresh generation...');
+      // CRITICAL: ALWAYS clear existing suggestions FIRST to prevent accumulation
+      console.log('🧹 STEP 1: Clearing ALL existing suggestions for fresh generation...');
       await clearMeetupSuggestions(currentSession.value.id);
+      
+      // Wait a moment to ensure database operation completes
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      console.log('🎯 Calculating optimal meetup locations...');
+      console.log('🎯 STEP 2: Calculating optimal meetup locations...');
       console.log('Connected users:', connectedUsers.value.map(u => ({
         name: u.name,
         location: u.location,
@@ -480,7 +486,7 @@ export const useMeetyStore = defineStore('meety', () => {
 
       // Calculate optimal meeting point
       const optimalPoint = calculateOptimalMeetingPoint(currentSession.value.users);
-      console.log('📍 Optimal meeting point:', optimalPoint);
+      console.log('📍 Optimal meeting point (MEDIAN):', optimalPoint);
 
       // Generate suggestions using the updated algorithm
       const calculatedSuggestions = await generateMeetupSuggestions(currentSession.value.users);
@@ -504,14 +510,18 @@ export const useMeetyStore = defineStore('meety', () => {
         average_distance: suggestion.averageDistance
       }));
 
-      console.log('💾 Saving', suggestionsToInsert.length, 'suggestions to database...');
-      const { error: insertError } = await supabase
+      console.log('💾 STEP 3: Saving', suggestionsToInsert.length, 'NEW suggestions to database...');
+      const { error: insertError, count } = await supabase
         .from('meetup_suggestions')
-        .insert(suggestionsToInsert);
+        .insert(suggestionsToInsert)
+        .select('id', { count: 'exact' });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('❌ Error inserting suggestions:', insertError);
+        throw insertError;
+      }
 
-      console.log('✅ Suggestions saved successfully');
+      console.log(`✅ Successfully saved ${count || suggestionsToInsert.length} NEW suggestions to database`);
       
       // Update the tracking variables
       lastSuggestionHash.value = getUserConfigHash();
@@ -521,8 +531,12 @@ export const useMeetyStore = defineStore('meety', () => {
       // Reload suggestions to get them with proper IDs
       await loadMeetupSuggestions(currentSession.value.id);
 
+      // Verify we have exactly the expected number of suggestions
+      const finalCount = currentSession.value.meetupSuggestions.length;
+      console.log(`🔍 Final verification: ${finalCount} suggestions in session (should be ~7)`);
+
     } catch (err) {
-      console.error('Error generating meetup suggestions:', err);
+      console.error('❌ Error generating meetup suggestions:', err);
       error.value = 'Failed to generate meetup suggestions';
     } finally {
       isLoading.value = false;
