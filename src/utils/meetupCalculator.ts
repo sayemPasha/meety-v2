@@ -396,7 +396,7 @@ function searchGooglePlaces(
   return new Promise((resolve) => {
     const request: google.maps.places.PlaceSearchRequest = {
       location: new google.maps.LatLng(location.lat, location.lng),
-      radius: 8000, // Increased to 8km radius for more options
+      radius: 3000, // Increased to 8km radius for more options
       type: placeType as any,
       openNow: false
     };
