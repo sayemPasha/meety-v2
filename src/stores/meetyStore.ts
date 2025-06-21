@@ -67,28 +67,46 @@ export const useMeetyStore = defineStore('meety', () => {
            (!hasValidSuggestions && canGenerateMeetups.value && currentHash !== '');
   };
 
-  // Clear meetup suggestions from database - FIXED TO PROPERLY CLEAR ALL
+  // Clear meetup suggestions from database - FIXED PROPERLY
   const clearMeetupSuggestions = async (sessionId: string) => {
     try {
-      console.log('🧹 Clearing ALL existing suggestions from database for session:', sessionId);
+      console.log('🧹 CLEARING ALL existing suggestions from database for session:', sessionId);
       
-      // First, clear local suggestions immediately to prevent UI showing old data
+      // First, get count of existing suggestions
+      const { count: existingCount } = await supabase
+        .from('meetup_suggestions')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', sessionId);
+
+      console.log(`📊 Found ${existingCount || 0} existing suggestions to delete`);
+
+      // Clear local suggestions immediately to prevent UI showing old data
       if (currentSession.value) {
         currentSession.value.meetupSuggestions = [];
         console.log('🧹 Cleared local suggestions cache immediately');
       }
 
       // Delete ALL suggestions for this session from database
-      const { error: deleteError, count } = await supabase
+      const { error: deleteError } = await supabase
         .from('meetup_suggestions')
-        .delete({ count: 'exact' })
+        .delete()
         .eq('session_id', sessionId);
 
       if (deleteError) {
         console.error('❌ Error clearing meetup suggestions:', deleteError);
         throw deleteError;
-      } else {
-        console.log(`✅ Successfully cleared ${count || 0} old meetup suggestions from database`);
+      }
+
+      // Verify deletion worked
+      const { count: remainingCount } = await supabase
+        .from('meetup_suggestions')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', sessionId);
+
+      console.log(`✅ Successfully cleared suggestions. Remaining count: ${remainingCount || 0}`);
+      
+      if (remainingCount && remainingCount > 0) {
+        console.warn('⚠️ Warning: Some suggestions may not have been deleted properly');
       }
       
     } catch (err) {
@@ -475,7 +493,7 @@ export const useMeetyStore = defineStore('meety', () => {
       await clearMeetupSuggestions(currentSession.value.id);
       
       // Wait a moment to ensure database operation completes
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       console.log('🎯 STEP 2: Calculating optimal meetup locations...');
       console.log('Connected users:', connectedUsers.value.map(u => ({
@@ -511,17 +529,17 @@ export const useMeetyStore = defineStore('meety', () => {
       }));
 
       console.log('💾 STEP 3: Saving', suggestionsToInsert.length, 'NEW suggestions to database...');
-      const { error: insertError, count } = await supabase
+      const { error: insertError, data: insertedData } = await supabase
         .from('meetup_suggestions')
         .insert(suggestionsToInsert)
-        .select('id', { count: 'exact' });
+        .select();
 
       if (insertError) {
         console.error('❌ Error inserting suggestions:', insertError);
         throw insertError;
       }
 
-      console.log(`✅ Successfully saved ${count || suggestionsToInsert.length} NEW suggestions to database`);
+      console.log(`✅ Successfully saved ${insertedData?.length || suggestionsToInsert.length} NEW suggestions to database`);
       
       // Update the tracking variables
       lastSuggestionHash.value = getUserConfigHash();
