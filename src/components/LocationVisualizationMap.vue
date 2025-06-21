@@ -38,7 +38,7 @@
               </div>
               <div class="flex items-center space-x-2">
                 <div class="w-4 h-4 bg-green-500 rounded-full"></div>
-                <span>Geographic Center</span>
+                <span>Median Center Point</span>
               </div>
             </div>
           </div>
@@ -48,7 +48,7 @@
             <h3 class="font-semibold text-gray-800 mb-3">Distance Analysis</h3>
             <div class="space-y-2 text-sm">
               <div v-if="centerPoint">
-                <div class="font-medium text-gray-700">Geographic Center:</div>
+                <div class="font-medium text-gray-700">Median Center Point:</div>
                 <div class="text-gray-600">{{ centerPoint.lat.toFixed(6) }}, {{ centerPoint.lng.toFixed(6) }}</div>
               </div>
               <div v-if="averageDistanceToCenter > 0">
@@ -145,7 +145,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { ACTIVITY_TYPES } from '@/types';
-import { calculateDistance, calculateGeographicCentroid } from '@/utils/meetupCalculator';
+import { calculateDistance, calculateMedianPoint } from '@/utils/meetupCalculator';
 import type { User, MeetupSuggestion } from '@/types';
 
 interface Props {
@@ -177,7 +177,8 @@ const centerPoint = computed(() => {
     lng: user.location!.lng
   }));
   
-  return calculateGeographicCentroid(locations);
+  // Use MEDIAN POINT calculation instead of centroid
+  return calculateMedianPoint(locations);
 });
 
 const averageDistanceToCenter = computed(() => {
@@ -406,13 +407,13 @@ const addCenterMarker = () => {
   centerMarker = new google.maps.Marker({
     position: { lat: centerPoint.value.lat, lng: centerPoint.value.lng },
     map: map,
-    title: 'Geographic Center Point',
+    title: 'Median Center Point',
     icon: {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="20" cy="20" r="15" fill="#22c55e" stroke="white" stroke-width="4"/>
           <circle cx="20" cy="20" r="6" fill="white"/>
-          <text x="20" y="50" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="bold">CENTER</text>
+          <text x="20" y="50" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="bold">MEDIAN</text>
         </svg>
       `),
       scaledSize: new google.maps.Size(40, 40),
@@ -424,8 +425,8 @@ const addCenterMarker = () => {
   const infoWindow = new google.maps.InfoWindow({
     content: `
       <div class="p-2">
-        <h3 class="font-semibold text-green-800">Geographic Center</h3>
-        <p class="text-sm text-gray-600">Calculated optimal meeting point</p>
+        <h3 class="font-semibold text-green-800">Median Center Point</h3>
+        <p class="text-sm text-gray-600">Calculated optimal meeting point using median algorithm</p>
         <p class="text-xs text-gray-500">Avg distance: ${averageDistanceToCenter.value.toFixed(2)} km</p>
         <p class="text-xs text-gray-500">Max distance: ${maxDistanceToCenter.value.toFixed(2)} km</p>
         <p class="text-xs text-gray-400">${centerPoint.value.lat.toFixed(6)}, ${centerPoint.value.lng.toFixed(6)}</p>
