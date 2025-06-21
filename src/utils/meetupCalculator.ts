@@ -48,6 +48,51 @@ export function calculateCenter(locations: Array<{ lat: number; lng: number }>) 
 }
 
 /**
+ * Calculate the geographic centroid (true center point) of multiple locations
+ * This uses proper geographic averaging, not separate median calculation
+ * @param locations Array of lat/lng objects
+ * @returns The geographic center point as lat/lng object
+ */
+export function calculateGeographicCentroid(locations: Array<{ lat: number; lng: number }>) {
+  if (locations.length === 0) {
+    return null;
+  }
+  
+  if (locations.length === 1) {
+    return locations[0];
+  }
+  
+  // Convert to Cartesian coordinates for proper averaging
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  
+  for (const location of locations) {
+    const latRad = location.lat * (Math.PI / 180);
+    const lngRad = location.lng * (Math.PI / 180);
+    
+    x += Math.cos(latRad) * Math.cos(lngRad);
+    y += Math.cos(latRad) * Math.sin(lngRad);
+    z += Math.sin(latRad);
+  }
+  
+  // Average the coordinates
+  x = x / locations.length;
+  y = y / locations.length;
+  z = z / locations.length;
+  
+  // Convert back to lat/lng
+  const centralLng = Math.atan2(y, x);
+  const centralSquareRoot = Math.sqrt(x * x + y * y);
+  const centralLat = Math.atan2(z, centralSquareRoot);
+  
+  return {
+    lat: centralLat * (180 / Math.PI),
+    lng: centralLng * (180 / Math.PI),
+  };
+}
+
+/**
  * Calculate the median point between multiple locations
  * This is more accurate than a simple average for finding a truly central point
  * @param locations Array of lat/lng objects
@@ -85,7 +130,7 @@ export function calculateMedianPoint(locations: Array<{ lat: number; lng: number
   };
 }
 
-// Calculate the geographic center (centroid) of all user locations using median point
+// Calculate the geographic center (centroid) of all user locations using proper geographic calculation
 export function calculateCentroid(users: User[]): Location {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
@@ -93,23 +138,32 @@ export function calculateCentroid(users: User[]): Location {
     throw new Error('No connected users with locations');
   }
 
-  // Extract locations for median calculation
+  console.log('🧮 Calculating centroid for users:', connectedUsers.map(u => ({
+    name: u.name,
+    location: u.location
+  })));
+
+  // Extract locations for centroid calculation
   const locations = connectedUsers.map(user => ({
     lat: user.location!.lat,
     lng: user.location!.lng
   }));
 
-  // Use median point calculation for more accurate center
-  const medianPoint = calculateMedianPoint(locations);
+  console.log('📍 Input locations for centroid:', locations);
+
+  // Use geographic centroid calculation for accurate center point
+  const centroid = calculateGeographicCentroid(locations);
   
-  if (!medianPoint) {
-    throw new Error('Could not calculate median point');
+  if (!centroid) {
+    throw new Error('Could not calculate geographic centroid');
   }
 
+  console.log('🎯 Calculated centroid:', centroid);
+
   return {
-    lat: medianPoint.lat,
-    lng: medianPoint.lng,
-    address: `${medianPoint.lat.toFixed(4)}, ${medianPoint.lng.toFixed(4)} (Optimal Center Point)`
+    lat: centroid.lat,
+    lng: centroid.lng,
+    address: `${centroid.lat.toFixed(6)}, ${centroid.lng.toFixed(6)} (Geographic Center)`
   };
 }
 
@@ -201,9 +255,9 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
     activity: u.activity
   })));
 
-  // Calculate the median point (optimal meeting point)
+  // Calculate the geographic centroid (optimal meeting point)
   const optimalPoint = calculateCentroid(users);
-  console.log('📍 Calculated optimal meeting point (median):', optimalPoint);
+  console.log('📍 Calculated optimal meeting point (geographic centroid):', optimalPoint);
   
   // Get preferred activity types
   const preferredActivities = getPreferredActivityTypes(users);
@@ -261,7 +315,7 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
     })
     .slice(0, 5); // Return top 5 suggestions
 
-  console.log('✨ Final suggestions (sorted by median point optimization):', sortedSuggestions);
+  console.log('✨ Final suggestions (sorted by geographic centroid optimization):', sortedSuggestions);
   return sortedSuggestions;
 }
 
@@ -424,7 +478,7 @@ function generateMockPlaces(centerLocation: Location, activityType: string, user
   });
 }
 
-// Calculate the optimal meeting point using median point calculation
+// Calculate the optimal meeting point using geographic centroid calculation
 export function calculateOptimalMeetingPoint(users: User[]): Location {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
@@ -432,7 +486,7 @@ export function calculateOptimalMeetingPoint(users: User[]): Location {
     throw new Error('No connected users with locations');
   }
 
-  // Use median point calculation for more accurate results
+  // Use geographic centroid calculation for accurate results
   return calculateCentroid(users);
 }
 
