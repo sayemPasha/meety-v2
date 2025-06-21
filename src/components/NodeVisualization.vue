@@ -54,12 +54,14 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Meetup Suggestions Modal -->
+  <!-- Meetup Suggestions Modal - MOVED OUTSIDE and made teleport to body -->
+  <Teleport to="body">
     <div
       v-if="showMeetupModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      @click="showMeetupModal = false"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+      @click="closeMeetupModal"
     >
       <div 
         class="bg-white rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden shadow-2xl"
@@ -71,13 +73,13 @@
               <h2 class="text-2xl font-bold text-gray-800 mb-2">🎯 Suggested Meetup Locations</h2>
               <p class="text-gray-600">Based on everyone's preferences and locations</p>
             </div>
-            <!-- Outdated indicator -->
-            <div v-if="store.areSuggestionsOutdated()" class="bg-yellow-100 border border-yellow-300 rounded-lg px-3 py-2">
-              <div class="flex items-center space-x-2">
-                <span class="text-yellow-600">⚠️</span>
-                <span class="text-sm text-yellow-700 font-medium">Suggestions may be outdated</span>
-              </div>
-            </div>
+            <!-- Close button -->
+            <button
+              class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+              @click="closeMeetupModal"
+            >
+              <span class="text-gray-600">✕</span>
+            </button>
           </div>
         </div>
         
@@ -188,7 +190,6 @@
         <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
           <div class="text-sm text-gray-600">
             Showing {{ meetupSuggestions.length }} suggestion{{ meetupSuggestions.length !== 1 ? 's' : '' }}
-            <span v-if="store.areSuggestionsOutdated()" class="text-yellow-600 ml-2">(May be outdated)</span>
           </div>
           <div class="flex items-center space-x-3">
             <button
@@ -201,7 +202,7 @@
             </button>
             <button
               class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
-              @click="showMeetupModal = false"
+              @click="closeMeetupModal"
             >
               Close
             </button>
@@ -209,7 +210,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -283,6 +284,10 @@ const generateSuggestions = async () => {
 const refreshSuggestions = async () => {
   console.log('🔄 Manually refreshing suggestions...');
   await store.generateMeetupSuggestions();
+};
+
+const closeMeetupModal = () => {
+  showMeetupModal.value = false;
 };
 
 const getActivityIcon = (type: string) => {
