@@ -192,6 +192,14 @@
             Showing {{ meetupSuggestions.length }} suggestion{{ meetupSuggestions.length !== 1 ? 's' : '' }}
           </div>
           <div class="flex items-center space-x-3">
+            <!-- Check Locations Button -->
+            <button
+              v-if="meetupSuggestions.length > 0"
+              class="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200"
+              @click="showLocationMap = true"
+            >
+              🗺️ Check Locations
+            </button>
             <button
               v-if="canGenerateMeetups"
               class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200"
@@ -211,12 +219,23 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- Location Visualization Map Modal -->
+  <Teleport to="body">
+    <LocationVisualizationMap
+      v-if="showLocationMap"
+      :users="users"
+      :meetup-suggestions="meetupSuggestions"
+      @close="showLocationMap = false"
+    />
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useMeetyStore } from '@/stores/meetyStore';
 import { ACTIVITY_TYPES } from '@/types';
+import LocationVisualizationMap from './LocationVisualizationMap.vue';
 
 const store = useMeetyStore();
 
@@ -226,6 +245,7 @@ const containerHeight = ref(600);
 const centerNode = ref<HTMLElement>();
 const userNodes = ref<HTMLElement[]>([]);
 const showMeetupModal = ref(false);
+const showLocationMap = ref(false);
 
 // Computed properties
 const users = computed(() => store.currentSession?.users || []);
