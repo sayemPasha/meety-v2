@@ -368,7 +368,8 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
     name: s.name,
     distanceToCenter: calculateDistance(centerPoint.lat, centerPoint.lng, s.location.lat, s.location.lng).toFixed(2) + 'km',
     avgDistance: s.averageDistance.toFixed(2) + 'km',
-    rating: s.rating
+    rating: s.rating,
+    hasPhoto: !!s.photoUrl
   })));
   
   return sortedSuggestions;
@@ -393,7 +394,7 @@ function removeDuplicateSuggestions(suggestions: MeetupSuggestion[]): MeetupSugg
   return unique;
 }
 
-// Search Google Places API
+// Search Google Places API - ENHANCED with better photo retrieval
 function searchGooglePlaces(
   placesService: google.maps.places.PlacesService,
   location: Location,
@@ -410,8 +411,12 @@ function searchGooglePlaces(
       openNow: false
     };
 
+    console.log(`🔍 Searching Google Places for ${placeType} near ${location.lat}, ${location.lng}`);
+
     placesService.nearbySearch(request, (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        console.log(`✅ Found ${results.length} places for ${placeType}`);
+        
         const suggestions = results
           .slice(0, maxResults)
           .filter(place => place.rating && place.rating >= 3.0)
@@ -430,13 +435,23 @@ function searchGooglePlaces(
               placeLocation.lng
             );
             
-            // Get photo URL if available
+            // Get photo URL if available - ENHANCED
             let photoUrl = '';
             if (place.photos && place.photos.length > 0) {
-              photoUrl = place.photos[0].getUrl({ maxWidth: 400, maxHeight: 300 });
+              try {
+                photoUrl = place.photos[0].getUrl({ 
+                  maxWidth: 400, 
+                  maxHeight: 300 
+                });
+                console.log(`📸 Retrieved photo for ${place.name}: ${photoUrl.substring(0, 50)}...`);
+              } catch (error) {
+                console.warn(`⚠️ Failed to get photo for ${place.name}:`, error);
+              }
+            } else {
+              console.log(`📷 No photos available for ${place.name}`);
             }
 
-            return {
+            const suggestion = {
               id: place.place_id || `${place.name?.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
               name: place.name || 'Unknown Place',
               type: activityType,
@@ -445,15 +460,19 @@ function searchGooglePlaces(
               distance: distanceToCenter,
               averageDistance,
               placeId: place.place_id,
-              photoUrl,
+              photoUrl: photoUrl || undefined,
               priceLevel: place.price_level,
               openNow: place.opening_hours?.open_now
             };
+
+            console.log(`📍 Created suggestion: ${suggestion.name} (${suggestion.rating}⭐, ${suggestion.distance.toFixed(1)}km, photo: ${!!suggestion.photoUrl})`);
+            
+            return suggestion;
           });
         
         resolve(suggestions);
       } else {
-        console.error('Places search failed:', status);
+        console.error(`❌ Places search failed for ${placeType}:`, status);
         resolve([]);
       }
     });
@@ -466,6 +485,8 @@ function generateMockSuggestions(
   centerPoint: Location, 
   preferredActivities: string[]
 ): MeetupSuggestion[] {
+  console.log('🎭 Generating mock suggestions (Google Places API not available)');
+  
   const suggestions: MeetupSuggestion[] = [];
   
   // Create suggestions for each preferred activity type
