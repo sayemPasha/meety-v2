@@ -372,4 +372,3 @@ pre {
   color: #4ade80 !important;
 }
 </style>
-</template>
