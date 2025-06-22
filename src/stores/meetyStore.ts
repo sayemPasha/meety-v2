@@ -96,12 +96,9 @@ export const useMeetyStore = defineStore('meety', () => {
     }
   };
 
-  // Real-time subscription setup - ENHANCED FOR BETTER SYNC
+  // Real-time subscription setup
   const setupRealtimeSubscription = (sessionId: string) => {
-    console.log('🔄 Setting up real-time subscription for session:', sessionId);
-    
     if (realtimeChannel.value) {
-      console.log('🔄 Unsubscribing from existing channel');
       realtimeChannel.value.unsubscribe();
     }
 
@@ -116,9 +113,7 @@ export const useMeetyStore = defineStore('meety', () => {
           filter: `session_id=eq.${sessionId}`,
         },
         async (payload) => {
-          console.log('🔄 Real-time session_users update received:', payload.eventType, payload.new || payload.old);
-          
-          // Force reload session data to ensure sync
+          console.log('Real-time session_users update:', payload);
           await loadSessionData(sessionId);
           
           // Mark suggestions as outdated when user data changes
@@ -134,32 +129,17 @@ export const useMeetyStore = defineStore('meety', () => {
           table: 'meetup_suggestions',
           filter: `session_id=eq.${sessionId}`,
         },
-        async (payload) => {
-          console.log('🔄 Real-time meetup_suggestions update received:', payload.eventType);
-          
-          // Force reload suggestions to ensure sync
-          await loadMeetupSuggestions(sessionId);
+        (payload) => {
+          console.log('Meetup suggestions update:', payload);
+          loadMeetupSuggestions(sessionId);
         }
       )
-      .on('subscribe', (status) => {
-        console.log('📡 Real-time subscription status:', status);
-      })
-      .on('error', (error) => {
-        console.error('❌ Real-time subscription error:', error);
-      })
-      .subscribe((status) => {
-        console.log('📡 Real-time channel status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active');
-        }
-      });
+      .subscribe();
   };
 
-  // Load session data from Supabase - ENHANCED WITH BETTER ERROR HANDLING
+  // Load session data from Supabase
   const loadSessionData = async (sessionId: string) => {
     try {
-      console.log('📥 Loading session data for:', sessionId);
-      
       // Load session
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
@@ -168,10 +148,7 @@ export const useMeetyStore = defineStore('meety', () => {
         .eq('is_active', true)
         .single();
 
-      if (sessionError) {
-        console.error('❌ Session load error:', sessionError);
-        throw sessionError;
-      }
+      if (sessionError) throw sessionError;
 
       // Load session users
       const { data: usersData, error: usersError } = await supabase
@@ -180,10 +157,7 @@ export const useMeetyStore = defineStore('meety', () => {
         .eq('session_id', sessionId)
         .order('created_at');
 
-      if (usersError) {
-        console.error('❌ Users load error:', usersError);
-        throw usersError;
-      }
+      if (usersError) throw usersError;
 
       // Load meetup suggestions
       const { data: suggestionsData, error: suggestionsError } = await supabase
@@ -192,16 +166,7 @@ export const useMeetyStore = defineStore('meety', () => {
         .eq('session_id', sessionId)
         .order('distance', { ascending: true }); // Order by distance to center
 
-      if (suggestionsError) {
-        console.error('❌ Suggestions load error:', suggestionsError);
-        throw suggestionsError;
-      }
-
-      console.log('📊 Loaded data:', {
-        session: sessionData.id,
-        users: usersData.length,
-        suggestions: suggestionsData.length
-      });
+      if (suggestionsError) throw suggestionsError;
 
       // Transform data to match our types
       const users: User[] = usersData.map(user => ({
@@ -231,7 +196,6 @@ export const useMeetyStore = defineStore('meety', () => {
         averageDistance: suggestion.average_distance
       }));
 
-      // Update session state
       currentSession.value = {
         id: sessionData.id,
         createdAt: new Date(sessionData.created_at),
@@ -246,29 +210,22 @@ export const useMeetyStore = defineStore('meety', () => {
       }
       lastUserCount.value = users.length;
 
-      console.log('✅ Session data loaded successfully');
-
     } catch (err) {
-      console.error('❌ Error loading session data:', err);
+      console.error('Error loading session data:', err);
       error.value = 'Failed to load session data';
     }
   };
 
-  // Load meetup suggestions - ENHANCED
+  // Load meetup suggestions
   const loadMeetupSuggestions = async (sessionId: string) => {
     try {
-      console.log('📥 Loading meetup suggestions for:', sessionId);
-      
       const { data, error: suggestionsError } = await supabase
         .from('meetup_suggestions')
         .select('*')
         .eq('session_id', sessionId)
         .order('distance', { ascending: true }); // Order by distance to center
 
-      if (suggestionsError) {
-        console.error('❌ Suggestions load error:', suggestionsError);
-        throw suggestionsError;
-      }
+      if (suggestionsError) throw suggestionsError;
 
       const suggestions: MeetupSuggestion[] = data.map(suggestion => ({
         id: suggestion.id,
@@ -292,11 +249,9 @@ export const useMeetyStore = defineStore('meety', () => {
           lastSuggestionHash.value = getUserConfigHash();
           lastUserCount.value = currentSession.value.users.length;
         }
-        
-        console.log('✅ Meetup suggestions loaded:', suggestions.length);
       }
     } catch (err) {
-      console.error('❌ Error loading meetup suggestions:', err);
+      console.error('Error loading meetup suggestions:', err);
     }
   };
 
@@ -304,7 +259,6 @@ export const useMeetyStore = defineStore('meety', () => {
   const createSession = async () => {
     try {
       isLoading.value = true;
-      console.log('🆕 Creating new session...');
       
       // Create session in Supabase
       const { data: sessionData, error: sessionError } = await supabase
@@ -335,9 +289,6 @@ export const useMeetyStore = defineStore('meety', () => {
       currentUserId.value = userData.id;
       currentUserDbId.value = userData.id;
 
-      console.log('✅ Session created:', sessionData.id);
-      console.log('✅ User created:', userData.id);
-
       // Load session data
       await loadSessionData(sessionData.id);
       
@@ -350,7 +301,7 @@ export const useMeetyStore = defineStore('meety', () => {
       window.history.replaceState({}, '', url.toString());
 
     } catch (err) {
-      console.error('❌ Error creating session:', err);
+      console.error('Error creating session:', err);
       error.value = 'Failed to create session';
     } finally {
       isLoading.value = false;
@@ -360,7 +311,6 @@ export const useMeetyStore = defineStore('meety', () => {
   const joinSession = async (sessionId: string) => {
     try {
       isLoading.value = true;
-      console.log('🔗 Joining session:', sessionId);
 
       // Load existing session data first
       await loadSessionData(sessionId);
@@ -387,8 +337,6 @@ export const useMeetyStore = defineStore('meety', () => {
       currentUserId.value = userData.id;
       currentUserDbId.value = userData.id;
 
-      console.log('✅ User joined:', userData.id);
-
       // Reload session data to include new user
       await loadSessionData(sessionId);
       
@@ -402,7 +350,7 @@ export const useMeetyStore = defineStore('meety', () => {
       lastUserCount.value = currentSession.value?.users.length || 0;
 
     } catch (err) {
-      console.error('❌ Error joining session:', err);
+      console.error('Error joining session:', err);
       error.value = 'Failed to join session';
     } finally {
       isLoading.value = false;
@@ -413,8 +361,6 @@ export const useMeetyStore = defineStore('meety', () => {
     if (!currentUserDbId.value || !currentSession.value) return;
 
     try {
-      console.log('📍 Updating user location:', location);
-      
       const { error: updateError } = await supabase
         .from('session_users')
         .update({
@@ -427,9 +373,7 @@ export const useMeetyStore = defineStore('meety', () => {
 
       if (updateError) throw updateError;
 
-      console.log('✅ User location updated in database');
-
-      // Update local state immediately for better UX
+      // Update local state
       if (currentUser.value) {
         currentUser.value.location = location;
       }
@@ -441,7 +385,7 @@ export const useMeetyStore = defineStore('meety', () => {
 
       await checkUserConnection();
     } catch (err) {
-      console.error('❌ Error updating user location:', err);
+      console.error('Error updating user location:', err);
       error.value = 'Failed to update location';
     }
   };
@@ -450,8 +394,6 @@ export const useMeetyStore = defineStore('meety', () => {
     if (!currentUserDbId.value || !currentSession.value) return;
 
     try {
-      console.log('🎯 Updating user activity:', activity);
-      
       const { error: updateError } = await supabase
         .from('session_users')
         .update({
@@ -462,9 +404,7 @@ export const useMeetyStore = defineStore('meety', () => {
 
       if (updateError) throw updateError;
 
-      console.log('✅ User activity updated in database');
-
-      // Update local state immediately for better UX
+      // Update local state
       if (currentUser.value) {
         currentUser.value.activity = activity;
       }
@@ -476,7 +416,7 @@ export const useMeetyStore = defineStore('meety', () => {
 
       await checkUserConnection();
     } catch (err) {
-      console.error('❌ Error updating user activity:', err);
+      console.error('Error updating user activity:', err);
       error.value = 'Failed to update activity';
     }
   };
@@ -488,8 +428,6 @@ export const useMeetyStore = defineStore('meety', () => {
     
     if (isConnected !== currentUser.value.connected) {
       try {
-        console.log('🔗 Updating connection status to:', isConnected);
-        
         const { error: updateError } = await supabase
           .from('session_users')
           .update({
@@ -500,12 +438,12 @@ export const useMeetyStore = defineStore('meety', () => {
 
         if (updateError) throw updateError;
 
-        // Update local state immediately
+        // Update local state
         currentUser.value.connected = isConnected;
         
-        console.log('✅ User connection status updated:', isConnected);
+        console.log('🔗 User connection status changed to:', isConnected);
       } catch (err) {
-        console.error('❌ Error updating connection status:', err);
+        console.error('Error updating connection status:', err);
       }
     }
   };
@@ -599,11 +537,9 @@ export const useMeetyStore = defineStore('meety', () => {
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
-  // Cleanup function - ENHANCED
+  // Cleanup function
   const cleanup = () => {
-    console.log('🧹 Cleaning up store...');
     if (realtimeChannel.value) {
-      console.log('🔄 Unsubscribing from real-time channel');
       realtimeChannel.value.unsubscribe();
       realtimeChannel.value = null;
     }
