@@ -120,7 +120,7 @@
                     <!-- Rating -->
                     <div class="flex items-center space-x-1 bg-yellow-50 px-2 py-1 rounded-lg">
                       <span class="text-yellow-500">⭐</span>
-                      <span class="font-medium text-sm">{{ suggestion.rating.toFixed(1) }}</span>
+                      <span class="font-medium text-sm text-gray-800">{{ suggestion.rating.toFixed(1) }}</span>
                     </div>
                     <!-- Price Level -->
                     <div v-if="suggestion.priceLevel" class="flex items-center bg-green-50 px-2 py-1 rounded-lg">
@@ -144,7 +144,7 @@
                   <div class="flex items-center space-x-4 text-sm">
                     <span class="flex items-center space-x-1">
                       <span class="text-blue-500">📍</span>
-                      <span>
+                      <span class="text-gray-700">
                         {{ connectedUsers.length === 1 
                           ? `${suggestion.distance.toFixed(1)}km from you` 
                           : `${suggestion.averageDistance.toFixed(1)}km avg distance` 
@@ -153,7 +153,7 @@
                     </span>
                     <span class="flex items-center space-x-1">
                       <span class="text-purple-500">🎯</span>
-                      <span>{{ getActivityName(suggestion.type) }}</span>
+                      <span class="text-gray-700">{{ getActivityName(suggestion.type) }}</span>
                     </span>
                   </div>
                   
