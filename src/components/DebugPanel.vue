@@ -72,8 +72,8 @@
         <!-- Debug Output -->
         <div v-if="debugOutput">
           <h4 class="font-semibold text-gray-800">Debug Output</h4>
-          <div class="bg-gray-100 p-2 rounded text-xs font-mono max-h-32 overflow-y-auto">
-            <pre>{{ debugOutput }}</pre>
+          <div class="bg-gray-900 text-green-400 p-3 rounded text-xs font-mono max-h-32 overflow-y-auto border">
+            <pre class="text-green-400">{{ debugOutput }}</pre>
           </div>
         </div>
 
@@ -363,5 +363,13 @@ const clearAllSuggestions = async () => {
 pre {
   white-space: pre-wrap;
   word-wrap: break-word;
+  color: #4ade80 !important; /* Force green text */
+}
+
+/* Ensure debug output is visible */
+.debug-output {
+  background-color: #1f2937 !important;
+  color: #4ade80 !important;
 }
 </style>
+</template>
