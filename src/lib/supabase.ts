@@ -95,7 +95,6 @@ export interface Database {
           rating: number;
           distance: number;
           average_distance: number;
-          photo_url: string | null;
           place_id: string | null;
           price_level: number | null;
           open_now: boolean | null;
@@ -112,7 +111,6 @@ export interface Database {
           rating?: number;
           distance?: number;
           average_distance?: number;
-          photo_url?: string | null;
           place_id?: string | null;
           price_level?: number | null;
           open_now?: boolean | null;
@@ -129,7 +127,6 @@ export interface Database {
           rating?: number;
           distance?: number;
           average_distance?: number;
-          photo_url?: string | null;
           place_id?: string | null;
           price_level?: number | null;
           open_now?: boolean | null;

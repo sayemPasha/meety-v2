@@ -435,7 +435,7 @@ function searchGooglePlaces(
               placeLocation.lng
             );
             
-            // Get photo URL if available - ENHANCED
+            // Get photo URL if available - ENHANCED but not stored
             let photoUrl = '';
             if (place.photos && place.photos.length > 0) {
               try {
@@ -460,7 +460,7 @@ function searchGooglePlaces(
               distance: distanceToCenter,
               averageDistance,
               placeId: place.place_id,
-              photoUrl: photoUrl || undefined,
+              photoUrl: photoUrl || undefined, // Include photo URL for immediate use
               priceLevel: place.price_level,
               openNow: place.opening_hours?.open_now
             };
