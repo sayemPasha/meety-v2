@@ -32,11 +32,11 @@
                 <div class="font-medium text-gray-700">Median Center Point:</div>
                 <div class="text-gray-600">{{ centerPoint.lat.toFixed(6) }}, {{ centerPoint.lng.toFixed(6) }}</div>
               </div>
-              <div v-if="averageDistanceToCenter >= 0">
+              <div v-if="averageDistanceToCenter > 0">
                 <div class="font-medium text-gray-700">Avg Distance to Center:</div>
                 <div class="text-gray-600">{{ averageDistanceToCenter.toFixed(2) }} km</div>
               </div>
-              <div v-if="maxDistanceToCenter >= 0">
+              <div v-if="maxDistanceToCenter > 0">
                 <div class="font-medium text-gray-700">Max Distance to Center:</div>
                 <div class="text-gray-600">{{ maxDistanceToCenter.toFixed(2) }} km</div>
               </div>
