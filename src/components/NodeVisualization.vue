@@ -85,94 +85,89 @@
           </div>
         </div>
         
-        <div class="p-6 space-y-4 max-h-96 overflow-y-auto">
+        <div class="p-6 space-y-6 max-h-96 overflow-y-auto">
           <div
-            v-for="suggestion in meetupSuggestions"
+            v-for="(suggestion, index) in meetupSuggestions"
             :key="suggestion.id"
-            class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-200"
+            class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
           >
-            <div class="flex items-start space-x-4">
-              <!-- Place Photo -->
-              <div class="flex-shrink-0">
+            <!-- Alternating Layout -->
+            <div 
+              class="flex"
+              :class="index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'"
+            >
+              <!-- Image Section -->
+              <div class="w-48 h-32 flex-shrink-0">
                 <div 
                   v-if="suggestion.photoUrl"
-                  class="w-24 h-24 rounded-lg overflow-hidden shadow-md"
+                  class="w-full h-full overflow-hidden"
                 >
                   <img 
                     :src="suggestion.photoUrl" 
                     :alt="suggestion.name"
                     class="w-full h-full object-cover"
+                    @error="handleImageError"
                   />
                 </div>
                 <div 
                   v-else
-                  class="w-24 h-24 rounded-lg bg-gradient-to-br from-cosmic-100 to-space-100 flex items-center justify-center shadow-md"
+                  class="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center"
                 >
-                  <span class="text-3xl">{{ getActivityIcon(suggestion.type) }}</span>
+                  <span class="text-4xl">{{ getActivityIcon(suggestion.type) }}</span>
                 </div>
               </div>
 
-              <!-- Place Details -->
-              <div class="flex-1 min-w-0">
+              <!-- Content Section -->
+              <div class="flex-1 p-4">
+                <!-- Title and Rating -->
                 <div class="flex items-start justify-between mb-2">
-                  <h3 class="font-semibold text-xl text-gray-800 truncate">{{ suggestion.name }}</h3>
-                  <div class="flex items-center space-x-2 ml-4">
-                    <!-- Rating -->
-                    <div class="flex items-center space-x-1 bg-yellow-50 px-2 py-1 rounded-lg">
-                      <span class="text-yellow-500">⭐</span>
-                      <span class="font-medium text-sm text-gray-800">{{ suggestion.rating.toFixed(1) }}</span>
-                    </div>
-                    <!-- Price Level -->
-                    <div v-if="suggestion.priceLevel" class="flex items-center bg-green-50 px-2 py-1 rounded-lg">
-                      <span class="text-green-600 text-sm font-medium">
-                        {{ '$'.repeat(suggestion.priceLevel) }}
-                      </span>
-                    </div>
-                    <!-- Open Now -->
-                    <div v-if="suggestion.openNow !== undefined" class="flex items-center px-2 py-1 rounded-lg"
-                         :class="suggestion.openNow ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'">
-                      <span class="text-xs font-medium">
-                        {{ suggestion.openNow ? 'Open Now' : 'Closed' }}
-                      </span>
-                    </div>
+                  <h3 class="font-bold text-lg text-gray-900 leading-tight">{{ suggestion.name }}</h3>
+                  <div class="flex items-center space-x-1 ml-3">
+                    <span class="text-yellow-500 text-sm">⭐</span>
+                    <span class="font-semibold text-sm text-gray-800">{{ suggestion.rating.toFixed(1) }}</span>
                   </div>
                 </div>
                 
-                <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ suggestion.location.address }}</p>
+                <!-- Address -->
+                <p class="text-gray-600 text-sm mb-3 leading-relaxed">{{ suggestion.location.address }}</p>
                 
+                <!-- Status and Info -->
                 <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-4 text-sm">
-                    <span class="flex items-center space-x-1">
-                      <span class="text-blue-500">📍</span>
-                      <span class="text-gray-700">
-                        {{ connectedUsers.length === 1 
-                          ? `${suggestion.distance.toFixed(1)}km from you` 
-                          : `${suggestion.averageDistance.toFixed(1)}km avg distance` 
-                        }}
+                  <div class="flex items-center space-x-3">
+                    <!-- Open Status -->
+                    <div v-if="suggestion.openNow !== undefined" class="flex items-center space-x-1">
+                      <div 
+                        class="w-2 h-2 rounded-full"
+                        :class="suggestion.openNow ? 'bg-green-500' : 'bg-red-500'"
+                      ></div>
+                      <span class="text-xs font-medium" :class="suggestion.openNow ? 'text-green-700' : 'text-red-700'">
+                        {{ suggestion.openNow ? 'Open' : 'Closed' }}
                       </span>
+                    </div>
+                    
+                    <!-- Distance -->
+                    <span class="text-xs text-gray-500">
+                      {{ connectedUsers.length === 1 
+                        ? `${suggestion.distance.toFixed(1)}km away` 
+                        : `${suggestion.averageDistance.toFixed(1)}km avg` 
+                      }}
                     </span>
-                    <span class="flex items-center space-x-1">
-                      <span class="text-purple-500">🎯</span>
-                      <span class="text-gray-700">{{ getActivityName(suggestion.type) }}</span>
-                    </span>
+                    
+                    <!-- Price Level -->
+                    <div v-if="suggestion.priceLevel" class="flex items-center">
+                      <span class="text-green-600 text-xs font-medium">
+                        {{ '$'.repeat(suggestion.priceLevel) }}
+                      </span>
+                    </div>
                   </div>
                   
-                  <!-- Action Buttons -->
-                  <div class="flex items-center space-x-2">
-                    <button
-                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
-                      @click="openInMaps(suggestion)"
-                    >
-                      📍 Open in Maps
-                    </button>
-                    <button
-                      v-if="suggestion.placeId"
-                      class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
-                      @click="viewPlaceDetails(suggestion)"
-                    >
-                      ℹ️ Details
-                    </button>
-                  </div>
+                  <!-- Action Button -->
+                  <button
+                    class="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
+                    @click="openInMaps(suggestion)"
+                  >
+                    View on Map
+                  </button>
                 </div>
               </div>
             </div>
@@ -352,11 +347,10 @@ const openInMaps = (suggestion: any) => {
   window.open(mapsUrl, '_blank');
 };
 
-const viewPlaceDetails = (suggestion: any) => {
-  if (suggestion.placeId) {
-    const detailsUrl = `https://www.google.com/maps/place/?q=place_id:${suggestion.placeId}`;
-    window.open(detailsUrl, '_blank');
-  }
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  img.style.display = 'none';
+  // The fallback div will show instead
 };
 
 const updateContainerSize = () => {
