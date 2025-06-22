@@ -359,46 +359,11 @@ export const useMeetyStore = defineStore('meety', () => {
     return false; // No redirect needed
   };
 
-  // NEW: Store user ID in localStorage to persist across redirects
-  const storeUserIdLocally = (userId: string) => {
-    try {
-      localStorage.setItem('meety_user_id', userId);
-      console.log('💾 Stored user ID locally:', userId.slice(0, 8));
-    } catch (err) {
-      console.warn('⚠️ Could not store user ID locally:', err);
-    }
-  };
-
-  const getStoredUserId = (): string | null => {
-    try {
-      const storedId = localStorage.getItem('meety_user_id');
-      if (storedId) {
-        console.log('📱 Retrieved stored user ID:', storedId.slice(0, 8));
-      }
-      return storedId;
-    } catch (err) {
-      console.warn('⚠️ Could not retrieve stored user ID:', err);
-      return null;
-    }
-  };
-
-  const clearStoredUserId = () => {
-    try {
-      localStorage.removeItem('meety_user_id');
-      console.log('🗑️ Cleared stored user ID');
-    } catch (err) {
-      console.warn('⚠️ Could not clear stored user ID:', err);
-    }
-  };
-
   // Actions
   const createSession = async () => {
     try {
       isLoading.value = true;
       console.log('🆕 Creating new session...');
-      
-      // Clear any existing stored user ID
-      clearStoredUserId();
       
       // Create session in Supabase
       const { data: sessionData, error: sessionError } = await supabase
@@ -428,9 +393,6 @@ export const useMeetyStore = defineStore('meety', () => {
 
       currentUserId.value = userData.id;
       currentUserDbId.value = userData.id;
-
-      // Store user ID locally for persistence across redirects
-      storeUserIdLocally(userData.id);
 
       console.log('✅ Session created:', sessionData.id);
       console.log('✅ User created:', userData.id);
@@ -464,33 +426,7 @@ export const useMeetyStore = defineStore('meety', () => {
         throw new Error('Session not found');
       }
 
-      // CRITICAL FIX: Check if we already have a stored user ID for this session
-      const storedUserId = getStoredUserId();
-      let existingUser = null;
-      
-      if (storedUserId) {
-        // Check if this user ID exists in the current session
-        existingUser = currentSession.value.users.find(user => user.id === storedUserId);
-        console.log('🔍 Checking for existing user with stored ID:', storedUserId.slice(0, 8));
-        
-        if (existingUser) {
-          console.log('✅ Found existing user - reconnecting instead of creating new user');
-          currentUserId.value = existingUser.id;
-          currentUserDbId.value = existingUser.id;
-          
-          // Setup real-time subscription for existing user
-          setupRealtimeSubscription(sessionId);
-          
-          console.log('🔗 Reconnected as existing user:', existingUser.name);
-          return; // Exit early - don't create a new user
-        } else {
-          console.log('⚠️ Stored user ID not found in session - will create new user');
-          clearStoredUserId(); // Clear invalid stored ID
-        }
-      }
-
-      // Only create a new user if we don't have an existing one
-      console.log('🆕 Creating new user for session');
+      // Create new user in session
       const userNumber = currentSession.value.users.length + 1;
       const { data: userData, error: userError } = await supabase
         .from('session_users')
@@ -508,10 +444,7 @@ export const useMeetyStore = defineStore('meety', () => {
       currentUserId.value = userData.id;
       currentUserDbId.value = userData.id;
 
-      // Store new user ID locally
-      storeUserIdLocally(userData.id);
-
-      console.log('✅ New user joined:', userData.id, 'as', userData.name);
+      console.log('✅ User joined:', userData.id, 'as', userData.name);
 
       // Setup real-time subscription BEFORE reloading data
       setupRealtimeSubscription(sessionId);
@@ -747,7 +680,6 @@ export const useMeetyStore = defineStore('meety', () => {
       realtimeChannel.value.unsubscribe();
       realtimeChannel.value = null;
     }
-    // Don't clear stored user ID on cleanup - we want it to persist
   };
 
   // Expose loadSessionData for debug panel
