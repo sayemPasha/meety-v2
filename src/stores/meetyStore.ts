@@ -67,51 +67,32 @@ export const useMeetyStore = defineStore('meety', () => {
            (!hasValidSuggestions && canGenerateMeetups.value && currentHash !== '');
   };
 
-  // Clear meetup suggestions from database - FIXED PROPERLY
+  // Clear meetup suggestions from database - SIMPLIFIED
   const clearMeetupSuggestions = async (sessionId: string) => {
     try {
-      console.log('🧹 CLEARING ALL existing suggestions from database for session:', sessionId);
+      console.log('🧹 Clearing suggestions for session:', sessionId);
       
-      // First, get count of existing suggestions
-      const { count: existingCount } = await supabase
-        .from('meetup_suggestions')
-        .select('*', { count: 'exact', head: true })
-        .eq('session_id', sessionId);
-
-      console.log(`📊 Found ${existingCount || 0} existing suggestions to delete`);
-
-      // Clear local suggestions immediately to prevent UI showing old data
+      // Clear local suggestions immediately
       if (currentSession.value) {
         currentSession.value.meetupSuggestions = [];
-        console.log('🧹 Cleared local suggestions cache immediately');
       }
 
-      // Delete ALL suggestions for this session from database
+      // Delete from database
       const { error: deleteError } = await supabase
         .from('meetup_suggestions')
         .delete()
         .eq('session_id', sessionId);
 
       if (deleteError) {
-        console.error('❌ Error clearing meetup suggestions:', deleteError);
-        throw deleteError;
-      }
-
-      // Verify deletion worked
-      const { count: remainingCount } = await supabase
-        .from('meetup_suggestions')
-        .select('*', { count: 'exact', head: true })
-        .eq('session_id', sessionId);
-
-      console.log(`✅ Successfully cleared suggestions. Remaining count: ${remainingCount || 0}`);
-      
-      if (remainingCount && remainingCount > 0) {
-        console.warn('⚠️ Warning: Some suggestions may not have been deleted properly');
+        console.error('❌ Error clearing suggestions:', deleteError);
+        // Don't throw - continue with generation even if clearing fails
+      } else {
+        console.log('✅ Successfully cleared suggestions');
       }
       
     } catch (err) {
       console.error('❌ Error in clearMeetupSuggestions:', err);
-      throw err;
+      // Don't throw - continue with generation
     }
   };
 
@@ -362,7 +343,7 @@ export const useMeetyStore = defineStore('meety', () => {
       // Setup real-time subscription
       setupRealtimeSubscription(sessionId);
 
-      // CLEAR EXISTING SUGGESTIONS when new user joins
+      // Clear existing suggestions when new user joins
       console.log('🆕 New user joined, clearing existing suggestions');
       await clearMeetupSuggestions(sessionId);
       lastSuggestionHash.value = '';
@@ -397,7 +378,7 @@ export const useMeetyStore = defineStore('meety', () => {
         currentUser.value.location = location;
       }
 
-      // CLEAR EXISTING SUGGESTIONS when user location changes
+      // Clear existing suggestions when user location changes
       console.log('📍 User location updated, clearing existing suggestions');
       await clearMeetupSuggestions(currentSession.value.id);
       lastSuggestionHash.value = '';
@@ -428,7 +409,7 @@ export const useMeetyStore = defineStore('meety', () => {
         currentUser.value.activity = activity;
       }
 
-      // CLEAR EXISTING SUGGESTIONS when user activity changes
+      // Clear existing suggestions when user activity changes
       console.log('🎯 User activity updated, clearing existing suggestions');
       await clearMeetupSuggestions(currentSession.value.id);
       lastSuggestionHash.value = '';
@@ -470,9 +451,6 @@ export const useMeetyStore = defineStore('meety', () => {
   const generateMeetupSuggestionsAction = async () => {
     if (!canGenerateMeetups.value || !currentSession.value) {
       console.log('❌ Cannot generate meetups - requirements not met');
-      console.log('Can generate:', canGenerateMeetups.value);
-      console.log('Connected users:', connectedUsers.value.length);
-      console.log('Users with location and activity:', connectedUsers.value.filter(u => u.location && u.activity).length);
       return;
     }
 
@@ -488,25 +466,16 @@ export const useMeetyStore = defineStore('meety', () => {
     try {
       console.log('🎯 Starting fresh meetup suggestion generation...');
       
-      // CRITICAL: ALWAYS clear existing suggestions FIRST to prevent accumulation
-      console.log('🧹 STEP 1: Clearing ALL existing suggestions for fresh generation...');
+      // Clear existing suggestions first
+      console.log('🧹 Clearing existing suggestions...');
       await clearMeetupSuggestions(currentSession.value.id);
       
-      // Wait a moment to ensure database operation completes
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait a moment for database operation
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      console.log('🎯 STEP 2: Calculating optimal meetup locations...');
-      console.log('Connected users:', connectedUsers.value.map(u => ({
-        name: u.name,
-        location: u.location,
-        activity: u.activity
-      })));
-
-      // Calculate optimal meeting point
-      const optimalPoint = calculateOptimalMeetingPoint(currentSession.value.users);
-      console.log('📍 Optimal meeting point (MEDIAN):', optimalPoint);
-
-      // Generate suggestions using the updated algorithm
+      console.log('🎯 Calculating optimal meetup locations...');
+      
+      // Generate suggestions
       const calculatedSuggestions = await generateMeetupSuggestions(currentSession.value.users);
       console.log('✨ Generated suggestions:', calculatedSuggestions.length, 'places');
       
@@ -524,11 +493,11 @@ export const useMeetyStore = defineStore('meety', () => {
         location_lng: suggestion.location.lng,
         location_address: suggestion.location.address,
         rating: suggestion.rating,
-        distance: suggestion.distance, // Distance to center point
+        distance: suggestion.distance,
         average_distance: suggestion.averageDistance
       }));
 
-      console.log('💾 STEP 3: Saving', suggestionsToInsert.length, 'NEW suggestions to database...');
+      console.log('💾 Saving', suggestionsToInsert.length, 'suggestions to database...');
       const { error: insertError, data: insertedData } = await supabase
         .from('meetup_suggestions')
         .insert(suggestionsToInsert)
@@ -539,19 +508,14 @@ export const useMeetyStore = defineStore('meety', () => {
         throw insertError;
       }
 
-      console.log(`✅ Successfully saved ${insertedData?.length || suggestionsToInsert.length} NEW suggestions to database`);
+      console.log(`✅ Successfully saved ${insertedData?.length || suggestionsToInsert.length} suggestions`);
       
-      // Update the tracking variables
+      // Update tracking variables
       lastSuggestionHash.value = getUserConfigHash();
       lastUserCount.value = currentSession.value.users.length;
-      console.log('📝 Updated tracking after generation');
 
-      // Reload suggestions to get them with proper IDs
+      // Reload suggestions
       await loadMeetupSuggestions(currentSession.value.id);
-
-      // Verify we have exactly the expected number of suggestions
-      const finalCount = currentSession.value.meetupSuggestions.length;
-      console.log(`🔍 Final verification: ${finalCount} suggestions in session (should be ~7)`);
 
     } catch (err) {
       console.error('❌ Error generating meetup suggestions:', err);
@@ -581,6 +545,9 @@ export const useMeetyStore = defineStore('meety', () => {
     }
   };
 
+  // Expose loadSessionData for debug panel
+  const loadSessionDataPublic = loadSessionData;
+
   return {
     // State
     currentSession,
@@ -602,6 +569,9 @@ export const useMeetyStore = defineStore('meety', () => {
     updateUserActivity,
     generateMeetupSuggestions: generateMeetupSuggestionsAction,
     getShareableLink,
-    cleanup
+    cleanup,
+    
+    // Debug methods
+    loadSessionData: loadSessionDataPublic
   };
 });

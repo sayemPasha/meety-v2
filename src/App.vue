@@ -144,6 +144,9 @@
         </button>
       </div>
     </div>
+
+    <!-- Debug Panel -->
+    <DebugPanel />
   </div>
 </template>
 
@@ -154,6 +157,7 @@ import { ACTIVITY_TYPES } from '@/types';
 import NodeVisualization from '@/components/NodeVisualization.vue';
 import LocationSelector from '@/components/LocationSelector.vue';
 import SharePanel from '@/components/SharePanel.vue';
+import DebugPanel from '@/components/DebugPanel.vue';
 
 const store = useMeetyStore();
 
