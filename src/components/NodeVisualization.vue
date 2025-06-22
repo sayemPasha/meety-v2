@@ -56,7 +56,7 @@
     </div>
   </div>
 
-  <!-- Meetup Suggestions Modal - MOVED OUTSIDE and made teleport to body -->
+  <!-- Meetup Suggestions Modal - REDUCED WIDTH -->
   <Teleport to="body">
     <div
       v-if="showMeetupModal"
@@ -64,7 +64,7 @@
       @click="closeMeetupModal"
     >
       <div 
-        class="bg-white rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden shadow-2xl"
+        class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl"
         @click.stop
       >
         <div class="p-6 border-b border-gray-200">
@@ -97,7 +97,7 @@
               :class="index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'"
             >
               <!-- Image Section -->
-              <div class="w-48 h-32 flex-shrink-0">
+              <div class="w-40 h-28 flex-shrink-0">
                 <div 
                   v-if="suggestion.photoUrl"
                   class="w-full h-full overflow-hidden"
@@ -113,7 +113,7 @@
                   v-else
                   class="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center"
                 >
-                  <span class="text-4xl">{{ getActivityIcon(suggestion.type) }}</span>
+                  <span class="text-3xl">{{ getActivityIcon(suggestion.type) }}</span>
                 </div>
               </div>
 
