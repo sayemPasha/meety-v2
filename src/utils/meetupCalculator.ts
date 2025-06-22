@@ -139,7 +139,7 @@ export function calculateMedianPoint(locations: Array<{ lat: number; lng: number
   };
 }
 
-// Calculate the geographic center using MEDIAN POINT calculation (more robust against outliers)
+// Calculate the geographic center - UPDATED to handle single user
 export function calculateCentroid(users: User[]): Location {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
@@ -147,32 +147,41 @@ export function calculateCentroid(users: User[]): Location {
     throw new Error('No connected users with locations');
   }
 
-  console.log('🧮 Calculating MEDIAN POINT for users:', connectedUsers.map(u => ({
+  console.log('🧮 Calculating center point for users:', connectedUsers.map(u => ({
     name: u.name,
     location: u.location
   })));
 
-  // Extract locations for median calculation
+  // Extract locations for calculation
   const locations = connectedUsers.map(user => ({
     lat: user.location!.lat,
     lng: user.location!.lng
   }));
 
-  console.log('📍 Input locations for median calculation:', locations);
+  console.log('📍 Input locations for calculation:', locations);
 
-  // Use MEDIAN POINT calculation - more robust against outliers than centroid
-  const medianPoint = calculateMedianPoint(locations);
+  let centerPoint;
   
-  if (!medianPoint) {
-    throw new Error('Could not calculate median point');
+  if (locations.length === 1) {
+    // For single user, use their location as center
+    centerPoint = locations[0];
+    console.log('👤 Single user: Using their location as center point');
+  } else {
+    // For multiple users, use median point calculation (more robust against outliers)
+    centerPoint = calculateMedianPoint(locations);
+    console.log('👥 Multiple users: Using median point calculation');
+  }
+  
+  if (!centerPoint) {
+    throw new Error('Could not calculate center point');
   }
 
-  console.log('🎯 Calculated MEDIAN POINT (center):', medianPoint);
+  console.log('🎯 Calculated center point:', centerPoint);
 
   return {
-    lat: medianPoint.lat,
-    lng: medianPoint.lng,
-    address: `${medianPoint.lat.toFixed(6)}, ${medianPoint.lng.toFixed(6)} (Median Center Point)`
+    lat: centerPoint.lat,
+    lng: centerPoint.lng,
+    address: `${centerPoint.lat.toFixed(6)}, ${centerPoint.lng.toFixed(6)} (${locations.length === 1 ? 'User Location' : 'Median Center Point'})`
   };
 }
 
@@ -250,12 +259,12 @@ function getGooglePlacesType(activityType: string): string {
   return typeMapping[activityType] || 'restaurant';
 }
 
-// Generate meetup suggestions using Google Places API - UPDATED ALGORITHM WITH MEDIAN
+// Generate meetup suggestions - UPDATED to handle single user
 export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSuggestion[]> {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
-  if (connectedUsers.length < 2) {
-    throw new Error('Need at least 2 connected users to generate suggestions');
+  if (connectedUsers.length < 1) {
+    throw new Error('Need at least 1 connected user to generate suggestions');
   }
 
   console.log('🎯 Generating meetup suggestions for users:', connectedUsers.map(u => ({
@@ -264,9 +273,9 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
     activity: u.activity
   })));
 
-  // Calculate the MEDIAN POINT (optimal meeting point) - more robust against outliers
-  const optimalPoint = calculateCentroid(users);
-  console.log('📍 Calculated optimal meeting point (MEDIAN POINT):', optimalPoint);
+  // Calculate the center point (user's location for single user, median for multiple)
+  const centerPoint = calculateCentroid(users);
+  console.log('📍 Calculated center point:', centerPoint);
   
   // Get preferred activity types
   const preferredActivities = getPreferredActivityTypes(users);
@@ -281,15 +290,15 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
         document.createElement('div')
       );
       
-      // Search for places for each preferred activity type (get more results)
-      for (const activityType of preferredActivities.slice(0, 4)) { // Increased to 4 activity types
+      // Search for places for each preferred activity type
+      for (const activityType of preferredActivities.slice(0, 4)) {
         const placesForActivity = await searchGooglePlaces(
           placesService, 
-          optimalPoint, 
+          centerPoint, 
           getGooglePlacesType(activityType),
           activityType,
           users,
-          10 // Get 10 results per activity type
+          10
         );
         allSuggestions.push(...placesForActivity);
       }
@@ -298,11 +307,11 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
       if (!preferredActivities.includes('restaurant')) {
         const restaurantPlaces = await searchGooglePlaces(
           placesService,
-          optimalPoint,
+          centerPoint,
           'restaurant',
           'restaurant',
           users,
-          15 // Get more restaurant options
+          15
         );
         allSuggestions.push(...restaurantPlaces);
       }
@@ -311,7 +320,7 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
       if (!preferredActivities.includes('coffee')) {
         const cafePlaces = await searchGooglePlaces(
           placesService,
-          optimalPoint,
+          centerPoint,
           'cafe',
           'coffee',
           users,
@@ -321,26 +330,26 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
       }
     } catch (error) {
       console.error('Google Places API error, falling back to mock data:', error);
-      return generateMockSuggestions(users, optimalPoint, preferredActivities);
+      return generateMockSuggestions(users, centerPoint, preferredActivities);
     }
   } else {
     console.log('Google Places API not available, using mock data');
-    return generateMockSuggestions(users, optimalPoint, preferredActivities);
+    return generateMockSuggestions(users, centerPoint, preferredActivities);
   }
 
   // Remove duplicates based on place ID or name+location
   const uniqueSuggestions = removeDuplicateSuggestions(allSuggestions);
 
-  // Sort by distance to MEDIAN POINT FIRST (closest first), then by rating
+  // Sort by distance to center point FIRST (closest first), then by rating
   const sortedSuggestions = uniqueSuggestions
     .sort((a, b) => {
-      // Primary sort: distance to median center point (closest first)
+      // Primary sort: distance to center point (closest first)
       const distanceToCenter_A = calculateDistance(
-        optimalPoint.lat, optimalPoint.lng,
+        centerPoint.lat, centerPoint.lng,
         a.location.lat, a.location.lng
       );
       const distanceToCenter_B = calculateDistance(
-        optimalPoint.lat, optimalPoint.lng,
+        centerPoint.lat, centerPoint.lng,
         b.location.lat, b.location.lng
       );
       
@@ -355,9 +364,9 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
     })
     .slice(0, 7); // Return top 7 suggestions
 
-  console.log('✨ Final suggestions (sorted by distance to MEDIAN POINT):', sortedSuggestions.map(s => ({
+  console.log('✨ Final suggestions (sorted by distance to center):', sortedSuggestions.map(s => ({
     name: s.name,
-    distanceToMedianCenter: calculateDistance(optimalPoint.lat, optimalPoint.lng, s.location.lat, s.location.lng).toFixed(2) + 'km',
+    distanceToCenter: calculateDistance(centerPoint.lat, centerPoint.lng, s.location.lat, s.location.lng).toFixed(2) + 'km',
     avgDistance: s.averageDistance.toFixed(2) + 'km',
     rating: s.rating
   })));
@@ -384,7 +393,7 @@ function removeDuplicateSuggestions(suggestions: MeetupSuggestion[]): MeetupSugg
   return unique;
 }
 
-// Search Google Places API - UPDATED with more results
+// Search Google Places API
 function searchGooglePlaces(
   placesService: google.maps.places.PlacesService,
   location: Location,
@@ -396,7 +405,7 @@ function searchGooglePlaces(
   return new Promise((resolve) => {
     const request: google.maps.places.PlaceSearchRequest = {
       location: new google.maps.LatLng(location.lat, location.lng),
-      radius: 3000, // Increased to 8km radius for more options
+      radius: 3000, // 3km radius for suggestions
       type: placeType as any,
       openNow: false
     };
@@ -404,7 +413,7 @@ function searchGooglePlaces(
     placesService.nearbySearch(request, (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
         const suggestions = results
-          .slice(0, maxResults) // Take more results
+          .slice(0, maxResults)
           .filter(place => place.rating && place.rating >= 3.0) // Filter out low-rated places
           .map(place => {
             const placeLocation = {
@@ -451,41 +460,41 @@ function searchGooglePlaces(
   });
 }
 
-// Fallback mock suggestions when Google Places API is not available - UPDATED
+// Fallback mock suggestions when Google Places API is not available
 function generateMockSuggestions(
   users: User[], 
-  optimalPoint: Location, 
+  centerPoint: Location, 
   preferredActivities: string[]
 ): MeetupSuggestion[] {
   const suggestions: MeetupSuggestion[] = [];
   
   // Create suggestions for each preferred activity type
   for (const activityType of preferredActivities.slice(0, 3)) {
-    const placesForActivity = generateMockPlaces(optimalPoint, activityType, users, 3);
+    const placesForActivity = generateMockPlaces(centerPoint, activityType, users, 3);
     suggestions.push(...placesForActivity);
   }
 
   // Always add restaurants
   if (!preferredActivities.includes('restaurant')) {
-    const restaurantPlaces = generateMockPlaces(optimalPoint, 'restaurant', users, 4);
+    const restaurantPlaces = generateMockPlaces(centerPoint, 'restaurant', users, 4);
     suggestions.push(...restaurantPlaces);
   }
 
   // Add cafes
   if (!preferredActivities.includes('coffee')) {
-    const cafePlaces = generateMockPlaces(optimalPoint, 'coffee', users, 2);
+    const cafePlaces = generateMockPlaces(centerPoint, 'coffee', users, 2);
     suggestions.push(...cafePlaces);
   }
 
-  // Sort by distance to median center point (closest first)
+  // Sort by distance to center point (closest first)
   return suggestions
     .sort((a, b) => {
       const distanceToCenter_A = calculateDistance(
-        optimalPoint.lat, optimalPoint.lng,
+        centerPoint.lat, centerPoint.lng,
         a.location.lat, a.location.lng
       );
       const distanceToCenter_B = calculateDistance(
-        optimalPoint.lat, optimalPoint.lng,
+        centerPoint.lat, centerPoint.lng,
         b.location.lat, b.location.lng
       );
       
@@ -501,7 +510,7 @@ function generateMockSuggestions(
     .slice(0, 7); // Return top 7 suggestions
 }
 
-// Generate mock places around a location - UPDATED
+// Generate mock places around a location
 function generateMockPlaces(centerLocation: Location, activityType: string, users: User[], count: number = 3): MeetupSuggestion[] {
   const placeTemplates = {
     restaurant: [
@@ -574,7 +583,7 @@ function generateMockPlaces(centerLocation: Location, activityType: string, user
   });
 }
 
-// Calculate the optimal meeting point using MEDIAN POINT calculation
+// Calculate the optimal meeting point - UPDATED to handle single user
 export function calculateOptimalMeetingPoint(users: User[]): Location {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
@@ -582,7 +591,7 @@ export function calculateOptimalMeetingPoint(users: User[]): Location {
     throw new Error('No connected users with locations');
   }
 
-  // Use MEDIAN POINT calculation for more robust results against outliers
+  // Use the same logic as calculateCentroid
   return calculateCentroid(users);
 }
 
