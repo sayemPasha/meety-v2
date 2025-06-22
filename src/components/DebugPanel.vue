@@ -1,6 +1,6 @@
 <!-- Debug Panel Component -->
 <template>
-  <div class="fixed bottom-4 right-4 z-50">
+  <div v-if="isDevMode" class="fixed bottom-4 right-4 z-50">
     <!-- Toggle Button -->
     <button
       v-if="!showPanel"
@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useMeetyStore } from '@/stores/meetyStore';
 import { supabase } from '@/lib/supabase';
 
@@ -97,6 +97,11 @@ const store = useMeetyStore();
 const showPanel = ref(false);
 const isLoading = ref(false);
 const debugOutput = ref('');
+
+// Check if dev mode is enabled
+const isDevMode = computed(() => {
+  return import.meta.env.VITE_DEV_MODE === 'true';
+});
 
 const log = (message: string) => {
   console.log(message);
