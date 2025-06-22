@@ -23,25 +23,6 @@
             ref="mapContainer" 
             class="w-full h-full min-h-[400px]"
           ></div>
-          
-          <!-- Legend -->
-          <div class="absolute top-4 left-4 bg-white rounded-xl p-4 shadow-lg border border-gray-200 z-10">
-            <h3 class="font-semibold text-gray-800 mb-3">Legend</h3>
-            <div class="space-y-2 text-sm">
-              <div class="flex items-center space-x-2">
-                <div class="w-4 h-4 bg-blue-500 rounded-full"></div>
-                <span>User Locations ({{ connectedUsers.length }})</span>
-              </div>
-              <div class="flex items-center space-x-2">
-                <div class="w-4 h-4 bg-red-500 rounded-full"></div>
-                <span>Meetup Suggestions ({{ meetupSuggestions.length }})</span>
-              </div>
-              <div class="flex items-center space-x-2">
-                <div class="w-4 h-4 bg-green-500 rounded-full"></div>
-                <span>Median Center Point</span>
-              </div>
-            </div>
-          </div>
 
           <!-- Statistics Panel -->
           <div class="absolute bottom-4 left-4 bg-white rounded-xl p-4 shadow-lg border border-gray-200 z-10 max-w-sm">
