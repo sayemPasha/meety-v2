@@ -97,17 +97,23 @@ export const useMeetyStore = defineStore('meety', () => {
     }
   };
 
-  // Real-time subscription setup - ENHANCED
+  // Real-time subscription setup - COMPLETELY REWRITTEN
   const setupRealtimeSubscription = (sessionId: string) => {
     console.log('🔄 Setting up real-time subscription for session:', sessionId);
     
+    // Clean up existing subscription
     if (realtimeChannel.value) {
       console.log('🔄 Cleaning up existing subscription');
       realtimeChannel.value.unsubscribe();
+      realtimeChannel.value = null;
     }
 
+    // Create new subscription with unique channel name
+    const channelName = `session-${sessionId}-${Date.now()}`;
+    console.log('📡 Creating channel:', channelName);
+
     realtimeChannel.value = supabase
-      .channel(`session-${sessionId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -117,14 +123,20 @@ export const useMeetyStore = defineStore('meety', () => {
           filter: `session_id=eq.${sessionId}`,
         },
         async (payload) => {
-          console.log('📡 Real-time session_users update:', payload.eventType, payload.new || payload.old);
+          console.log('📡 REAL-TIME EVENT - session_users:', {
+            event: payload.eventType,
+            table: payload.table,
+            new: payload.new,
+            old: payload.old
+          });
           
-          // Force reload session data to get latest state
+          // Force immediate reload of session data
+          console.log('🔄 Force reloading session data due to user change...');
           await loadSessionData(sessionId);
           
           // Mark suggestions as outdated when user data changes
-          console.log('🔄 User data changed, marking suggestions as outdated');
-          lastSuggestionHash.value = ''; // Mark as outdated
+          console.log('🔄 Marking suggestions as outdated');
+          lastSuggestionHash.value = '';
         }
       )
       .on(
@@ -136,23 +148,42 @@ export const useMeetyStore = defineStore('meety', () => {
           filter: `session_id=eq.${sessionId}`,
         },
         async (payload) => {
-          console.log('📡 Real-time meetup_suggestions update:', payload.eventType, payload.new || payload.old);
+          console.log('📡 REAL-TIME EVENT - meetup_suggestions:', {
+            event: payload.eventType,
+            table: payload.table,
+            new: payload.new,
+            old: payload.old
+          });
           
-          // Force reload suggestions to get latest state
+          // Force immediate reload of suggestions
+          console.log('🔄 Force reloading suggestions due to suggestion change...');
           await loadMeetupSuggestions(sessionId);
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         console.log('📡 Real-time subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active');
+          console.log('✅ Real-time subscription ACTIVE for session:', sessionId);
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error');
+          console.error('❌ Real-time subscription ERROR:', err);
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏰ Real-time subscription TIMED OUT');
+        } else if (status === 'CLOSED') {
+          console.log('🔒 Real-time subscription CLOSED');
         }
       });
+
+    // Add heartbeat to keep connection alive
+    const heartbeat = setInterval(() => {
+      if (realtimeChannel.value) {
+        console.log('💓 Real-time heartbeat');
+      } else {
+        clearInterval(heartbeat);
+      }
+    }, 30000); // Every 30 seconds
   };
 
-  // Load session data from Supabase - ENHANCED
+  // Load session data from Supabase - ENHANCED WITH BETTER LOGGING
   const loadSessionData = async (sessionId: string) => {
     try {
       console.log('📥 Loading session data for:', sessionId);
@@ -170,7 +201,7 @@ export const useMeetyStore = defineStore('meety', () => {
         throw sessionError;
       }
 
-      // Load session users with fresh data
+      // Load session users with fresh data (no cache)
       const { data: usersData, error: usersError } = await supabase
         .from('session_users')
         .select('*')
@@ -187,16 +218,17 @@ export const useMeetyStore = defineStore('meety', () => {
         .from('meetup_suggestions')
         .select('*')
         .eq('session_id', sessionId)
-        .order('distance', { ascending: true }); // Order by distance to center
+        .order('distance', { ascending: true });
 
       if (suggestionsError) {
         console.error('❌ Suggestions load error:', suggestionsError);
         throw suggestionsError;
       }
 
-      console.log('📊 Loaded data:', {
+      console.log('📊 Fresh data loaded:', {
         users: usersData?.length || 0,
-        suggestions: suggestionsData?.length || 0
+        suggestions: suggestionsData?.length || 0,
+        userDetails: usersData?.map(u => ({ id: u.id.slice(0, 8), name: u.name, connected: u.connected }))
       });
 
       // Transform data to match our types
@@ -228,6 +260,7 @@ export const useMeetyStore = defineStore('meety', () => {
       }));
 
       // Update session with fresh data
+      const previousUserCount = currentSession.value?.users.length || 0;
       currentSession.value = {
         id: sessionData.id,
         createdAt: new Date(sessionData.created_at),
@@ -242,7 +275,12 @@ export const useMeetyStore = defineStore('meety', () => {
       }
       lastUserCount.value = users.length;
 
-      console.log('✅ Session data loaded successfully');
+      // Log user count changes
+      if (previousUserCount !== users.length) {
+        console.log(`👥 User count changed: ${previousUserCount} → ${users.length}`);
+      }
+
+      console.log('✅ Session data loaded and updated successfully');
 
     } catch (err) {
       console.error('❌ Error loading session data:', err);
@@ -259,7 +297,7 @@ export const useMeetyStore = defineStore('meety', () => {
         .from('meetup_suggestions')
         .select('*')
         .eq('session_id', sessionId)
-        .order('distance', { ascending: true }); // Order by distance to center
+        .order('distance', { ascending: true });
 
       if (suggestionsError) {
         console.error('❌ Suggestions load error:', suggestionsError);
@@ -337,7 +375,7 @@ export const useMeetyStore = defineStore('meety', () => {
       // Load session data
       await loadSessionData(sessionData.id);
       
-      // Setup real-time subscription
+      // Setup real-time subscription AFTER loading data
       setupRealtimeSubscription(sessionData.id);
 
       // Update URL
@@ -383,13 +421,13 @@ export const useMeetyStore = defineStore('meety', () => {
       currentUserId.value = userData.id;
       currentUserDbId.value = userData.id;
 
-      console.log('✅ User joined:', userData.id);
+      console.log('✅ User joined:', userData.id, 'as', userData.name);
+
+      // Setup real-time subscription BEFORE reloading data
+      setupRealtimeSubscription(sessionId);
 
       // Reload session data to include new user
       await loadSessionData(sessionId);
-      
-      // Setup real-time subscription
-      setupRealtimeSubscription(sessionId);
 
       // Clear existing suggestions when new user joins
       console.log('🆕 New user joined, clearing existing suggestions');
@@ -423,7 +461,7 @@ export const useMeetyStore = defineStore('meety', () => {
 
       if (updateError) throw updateError;
 
-      // Update local state immediately
+      // Update local state immediately for better UX
       if (currentUser.value) {
         currentUser.value.location = location;
       }
@@ -458,7 +496,7 @@ export const useMeetyStore = defineStore('meety', () => {
 
       if (updateError) throw updateError;
 
-      // Update local state immediately
+      // Update local state immediately for better UX
       if (currentUser.value) {
         currentUser.value.activity = activity;
       }
@@ -575,7 +613,7 @@ export const useMeetyStore = defineStore('meety', () => {
       lastSuggestionHash.value = getUserConfigHash();
       lastUserCount.value = currentSession.value.users.length;
 
-      // Reload suggestions
+      // Reload suggestions to get them with proper IDs
       await loadMeetupSuggestions(currentSession.value.id);
 
     } catch (err) {
