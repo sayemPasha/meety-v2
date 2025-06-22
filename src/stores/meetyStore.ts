@@ -26,9 +26,8 @@ export const useMeetyStore = defineStore('meety', () => {
     currentSession.value?.users.find(user => user.id === currentUserId.value)
   );
 
-  // UPDATED: Allow suggestions for single user with location and activity
   const canGenerateMeetups = computed(() => 
-    connectedUsers.value.length >= 1 && 
+    connectedUsers.value.length >= 2 && 
     connectedUsers.value.every(user => user.location && user.activity)
   );
 
@@ -452,8 +451,6 @@ export const useMeetyStore = defineStore('meety', () => {
   const generateMeetupSuggestionsAction = async () => {
     if (!canGenerateMeetups.value || !currentSession.value) {
       console.log('❌ Cannot generate meetups - requirements not met');
-      console.log('Connected users:', connectedUsers.value.length);
-      console.log('Users with location and activity:', connectedUsers.value.filter(u => u.location && u.activity).length);
       return;
     }
 
@@ -468,7 +465,6 @@ export const useMeetyStore = defineStore('meety', () => {
     
     try {
       console.log('🎯 Starting fresh meetup suggestion generation...');
-      console.log('Connected users:', connectedUsers.value.length);
       
       // Clear existing suggestions first
       console.log('🧹 Clearing existing suggestions...');
