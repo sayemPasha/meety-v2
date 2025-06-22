@@ -334,6 +334,31 @@ export const useMeetyStore = defineStore('meety', () => {
     }
   };
 
+  // NEW: Check if user should be redirected to shareable link
+  const checkAndRedirectToShareableLink = () => {
+    if (!currentSession.value || !currentUser.value) return;
+    
+    // Check if user has location and activity (share link conditions met)
+    const hasLocationAndActivity = currentUser.value.location && currentUser.value.activity;
+    
+    if (hasLocationAndActivity) {
+      const currentUrl = new URL(window.location.href);
+      const sessionParam = currentUrl.searchParams.get('session');
+      
+      // If we're not already on the shareable link URL, redirect to it
+      if (!sessionParam || sessionParam !== currentSession.value.id) {
+        console.log('🔗 User has location & activity - redirecting to shareable link');
+        const shareableUrl = getShareableLink();
+        
+        // Use replace instead of assign to avoid back button issues
+        window.location.replace(shareableUrl);
+        return true; // Indicate that redirect happened
+      }
+    }
+    
+    return false; // No redirect needed
+  };
+
   // Actions
   const createSession = async () => {
     try {
@@ -378,10 +403,8 @@ export const useMeetyStore = defineStore('meety', () => {
       // Setup real-time subscription AFTER loading data
       setupRealtimeSubscription(sessionData.id);
 
-      // Update URL
-      const url = new URL(window.location.href);
-      url.searchParams.set('session', sessionData.id);
-      window.history.replaceState({}, '', url.toString());
+      // DON'T update URL here - let the redirect logic handle it
+      console.log('🔗 Session created, URL will be updated when user sets location & activity');
 
     } catch (err) {
       console.error('❌ Error creating session:', err);
@@ -473,6 +496,13 @@ export const useMeetyStore = defineStore('meety', () => {
 
       await checkUserConnection();
       
+      // NEW: Check if we should redirect to shareable link
+      const redirected = checkAndRedirectToShareableLink();
+      if (redirected) {
+        console.log('🔗 Redirected to shareable link after location update');
+        return; // Exit early since we're redirecting
+      }
+      
       console.log('✅ Location updated successfully');
     } catch (err) {
       console.error('❌ Error updating user location:', err);
@@ -507,6 +537,13 @@ export const useMeetyStore = defineStore('meety', () => {
       lastSuggestionHash.value = '';
 
       await checkUserConnection();
+      
+      // NEW: Check if we should redirect to shareable link
+      const redirected = checkAndRedirectToShareableLink();
+      if (redirected) {
+        console.log('🔗 Redirected to shareable link after activity update');
+        return; // Exit early since we're redirecting
+      }
       
       console.log('✅ Activity updated successfully');
     } catch (err) {
@@ -672,6 +709,9 @@ export const useMeetyStore = defineStore('meety', () => {
     cleanup,
     
     // Debug methods
-    loadSessionData: loadSessionDataPublic
+    loadSessionData: loadSessionDataPublic,
+    
+    // NEW: Expose redirect check for manual testing
+    checkAndRedirectToShareableLink
   };
 });
