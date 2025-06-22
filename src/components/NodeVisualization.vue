@@ -71,7 +71,9 @@
           <div class="flex items-center justify-between">
             <div>
               <h2 class="text-2xl font-bold text-gray-800 mb-2">🎯 Suggested Meetup Locations</h2>
-              <p class="text-gray-600">Based on everyone's preferences and locations</p>
+              <p class="text-gray-600">
+                {{ connectedUsers.length === 1 ? 'Places near your location' : 'Based on everyone\'s preferences and locations' }}
+              </p>
             </div>
             <!-- Close button -->
             <button
@@ -142,7 +144,12 @@
                   <div class="flex items-center space-x-4 text-sm">
                     <span class="flex items-center space-x-1">
                       <span class="text-blue-500">📍</span>
-                      <span>{{ suggestion.averageDistance.toFixed(1) }}km avg distance</span>
+                      <span>
+                        {{ connectedUsers.length === 1 
+                          ? `${suggestion.distance.toFixed(1)}km from you` 
+                          : `${suggestion.averageDistance.toFixed(1)}km avg distance` 
+                        }}
+                      </span>
                     </span>
                     <span class="flex items-center space-x-1">
                       <span class="text-purple-500">🎯</span>
@@ -175,7 +182,12 @@
           <div v-if="meetupSuggestions.length === 0" class="text-center py-8">
             <div class="text-6xl mb-4">🤔</div>
             <h3 class="text-lg font-semibold text-gray-800 mb-2">No suggestions yet</h3>
-            <p class="text-gray-600">Make sure all users have set their locations and activities.</p>
+            <p class="text-gray-600">
+              {{ connectedUsers.length === 0 
+                ? 'Set your location and activity to get started.' 
+                : 'Make sure all users have set their locations and activities.' 
+              }}
+            </p>
             <button
               v-if="canGenerateMeetups"
               class="mt-4 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
@@ -189,7 +201,10 @@
         
         <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
           <div class="text-sm text-gray-600">
-            Showing {{ meetupSuggestions.length }} suggestion{{ meetupSuggestions.length !== 1 ? 's' : '' }}
+            {{ connectedUsers.length === 1 
+              ? `Showing ${meetupSuggestions.length} suggestion${meetupSuggestions.length !== 1 ? 's' : ''} near you`
+              : `Showing ${meetupSuggestions.length} suggestion${meetupSuggestions.length !== 1 ? 's' : ''} for ${connectedUsers.length} users`
+            }}
           </div>
           <div class="flex items-center space-x-3">
             <!-- Check Locations Button -->
@@ -252,6 +267,7 @@ const users = computed(() => store.currentSession?.users || []);
 const currentUserId = computed(() => store.currentUserId);
 const canGenerateMeetups = computed(() => store.canGenerateMeetups);
 const meetupSuggestions = computed(() => store.currentSession?.meetupSuggestions || []);
+const connectedUsers = computed(() => store.connectedUsers);
 
 const centerPosition = computed(() => ({
   x: containerWidth.value / 2,
@@ -285,7 +301,7 @@ const handleCenterNodeClick = async () => {
     console.log('❌ Cannot generate meetups yet');
     console.log('Connected users count:', store.connectedUsers.length);
     console.log('Users with location and activity:', store.connectedUsers.filter(u => u.location && u.activity).length);
-    console.log('Requirements: Need at least 2 connected users with location and activity set');
+    console.log('Requirements: Need at least 1 connected user with location and activity set');
   }
 };
 
