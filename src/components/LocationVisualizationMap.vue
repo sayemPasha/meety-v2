@@ -72,7 +72,8 @@
               <div
                 v-for="(user, index) in connectedUsers"
                 :key="user.id"
-                class="bg-white rounded-lg p-3 border border-gray-200"
+                class="bg-white rounded-lg p-3 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                @click="zoomToLocation(user.location!.lat, user.location!.lng, user.name)"
               >
                 <div class="flex items-center space-x-3">
                   <div 
@@ -88,6 +89,9 @@
                   </div>
                   <div class="text-lg">{{ getActivityIcon(user.activity) }}</div>
                 </div>
+                <div class="mt-2 text-xs text-blue-600 font-medium">
+                  📍 Click to zoom to location
+                </div>
               </div>
             </div>
           </div>
@@ -99,7 +103,8 @@
               <div
                 v-for="suggestion in meetupSuggestions"
                 :key="suggestion.id"
-                class="bg-white rounded-lg p-3 border border-gray-200"
+                class="bg-white rounded-lg p-3 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                @click="zoomToLocation(suggestion.location.lat, suggestion.location.lng, suggestion.name)"
               >
                 <div class="flex items-start space-x-3">
                   <div class="w-4 h-4 bg-red-500 rounded-full mt-1 flex-shrink-0"></div>
@@ -116,6 +121,9 @@
                       <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
                         📍 {{ suggestion.averageDistance.toFixed(1) }}km avg
                       </span>
+                    </div>
+                    <div class="mt-2 text-xs text-blue-600 font-medium">
+                      📍 Click to zoom to location
                     </div>
                   </div>
                   <div class="text-lg">{{ getActivityIcon(suggestion.type) }}</div>
@@ -217,6 +225,61 @@ const maxDistanceToCenter = computed(() => {
   
   return maxDistance;
 });
+
+// Zoom to specific location function
+const zoomToLocation = (lat: number, lng: number, name: string) => {
+  if (!map) return;
+  
+  console.log(`🔍 Zooming to ${name} at ${lat}, ${lng}`);
+  
+  const location = new google.maps.LatLng(lat, lng);
+  
+  // Animate to the location with a smooth pan and zoom
+  map.panTo(location);
+  map.setZoom(16); // Close zoom level for detailed view
+  
+  // Optional: Add a temporary highlight effect
+  const highlightMarker = new google.maps.Marker({
+    position: location,
+    map: map,
+    icon: {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+        <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="30" r="25" fill="rgba(59, 130, 246, 0.3)" stroke="#3b82f6" stroke-width="4"/>
+          <circle cx="30" cy="30" r="15" fill="rgba(59, 130, 246, 0.5)" stroke="#3b82f6" stroke-width="2"/>
+          <circle cx="30" cy="30" r="8" fill="#3b82f6"/>
+        </svg>
+      `),
+      scaledSize: new google.maps.Size(60, 60),
+      anchor: new google.maps.Point(30, 30)
+    },
+    animation: google.maps.Animation.BOUNCE
+  });
+  
+  // Remove the highlight marker after 3 seconds
+  setTimeout(() => {
+    highlightMarker.setMap(null);
+  }, 3000);
+  
+  // Show info about the location
+  const infoWindow = new google.maps.InfoWindow({
+    content: `
+      <div class="p-2">
+        <h3 class="font-semibold text-blue-800">📍 ${name}</h3>
+        <p class="text-sm text-gray-600">Zoomed to this location</p>
+        <p class="text-xs text-gray-400">${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
+      </div>
+    `,
+    position: location
+  });
+  
+  infoWindow.open(map);
+  
+  // Close info window after 4 seconds
+  setTimeout(() => {
+    infoWindow.close();
+  }, 4000);
+};
 
 // Initialize Google Maps
 const initializeMap = () => {
@@ -328,6 +391,9 @@ const addUserMarkers = () => {
       });
       
       infoWindow.open(map, marker);
+      
+      // Also zoom to this location
+      zoomToLocation(user.location!.lat, user.location!.lng, user.name);
     });
 
     (marker as any).infoWindow = infoWindow;
@@ -388,6 +454,9 @@ const addSuggestionMarkers = () => {
       });
       
       infoWindow.open(map, marker);
+      
+      // Also zoom to this location
+      zoomToLocation(suggestion.location.lat, suggestion.location.lng, suggestion.name);
     });
 
     (marker as any).infoWindow = infoWindow;
@@ -446,6 +515,9 @@ const addCenterMarker = () => {
     });
     
     infoWindow.open(map, centerMarker);
+    
+    // Also zoom to center point
+    zoomToLocation(centerPoint.value!.lat, centerPoint.value!.lng, 'Median Center Point');
   });
 };
 
