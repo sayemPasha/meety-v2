@@ -232,6 +232,7 @@ export const useMeetyStore = defineStore('meety', () => {
         rating: suggestion.rating,
         distance: suggestion.distance,
         averageDistance: suggestion.average_distance,
+        photoUrl: suggestion.photo_url || undefined,
         placeId: suggestion.place_id || undefined,
         priceLevel: suggestion.price_level || undefined,
         openNow: suggestion.open_now || undefined
@@ -292,6 +293,7 @@ export const useMeetyStore = defineStore('meety', () => {
         rating: suggestion.rating,
         distance: suggestion.distance,
         averageDistance: suggestion.average_distance,
+        photoUrl: suggestion.photo_url || undefined,
         placeId: suggestion.place_id || undefined,
         priceLevel: suggestion.price_level || undefined,
         openNow: suggestion.open_now || undefined
@@ -567,7 +569,7 @@ export const useMeetyStore = defineStore('meety', () => {
         return;
       }
 
-      // Prepare data for database insertion (without photo URLs)
+      // Prepare data for database insertion
       const suggestionsToInsert = calculatedSuggestions.map(suggestion => ({
         session_id: currentSession.value!.id,
         name: suggestion.name,
@@ -578,6 +580,7 @@ export const useMeetyStore = defineStore('meety', () => {
         rating: suggestion.rating,
         distance: suggestion.distance,
         average_distance: suggestion.averageDistance,
+        photo_url: suggestion.photoUrl || null,
         place_id: suggestion.placeId || null,
         price_level: suggestion.priceLevel || null,
         open_now: suggestion.openNow || null
