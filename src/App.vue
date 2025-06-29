@@ -120,6 +120,25 @@
       </div>
     </main>
 
+    <!-- Footer with Bolt.new Badge -->
+    <footer class="relative z-20 px-6 pb-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex justify-center">
+          <a 
+            href="https://bolt.new" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/20 transition-all duration-200 group"
+          >
+            <svg class="w-4 h-4 text-blue-400 group-hover:text-blue-300 transition-colors" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 3L4 14h7v7l9-11h-7V3z"/>
+            </svg>
+            <span class="font-medium">Built with Bolt.new</span>
+          </a>
+        </div>
+      </div>
+    </footer>
+
     <!-- Location Selector Modal -->
     <LocationSelector
       v-if="showLocationSelector"
