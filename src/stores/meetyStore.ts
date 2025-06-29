@@ -17,12 +17,13 @@ export const useMeetyStore = defineStore('meety', () => {
   const lastUserCount = ref<number>(0); // Track user count changes
   const isGeneratingSuggestions = ref(false); // Prevent concurrent generation
   
-  // NEW: Infinite scroll state for suggestions
+  // NEW: Infinite scroll state for suggestions - UPDATED for true batching
   const allGeneratedSuggestions = ref<MeetupSuggestion[]>([]); // Store all generated suggestions
   const displayedSuggestionsCount = ref(7); // How many to show initially
   const isLoadingMore = ref(false); // Loading state for infinite scroll
-  const hasGeneratedAllSuggestions = ref(false); // Track if we've generated all possible suggestions
-  const currentBatch = ref(1); // Track which batch we're on for generating more
+  const currentBatch = ref(0); // Track which batch we're on for generating more
+  const suggestionsPerBatch = ref(7); // How many suggestions to generate per batch
+  const maxBatchesPerActivity = ref(5); // Maximum batches per activity type to prevent infinite generation
 
   // Computed properties
   const connectedUsers = computed(() => 
@@ -48,15 +49,15 @@ export const useMeetyStore = defineStore('meety', () => {
     allGeneratedSuggestions.value.slice(0, displayedSuggestionsCount.value)
   );
 
-  // NEW: Check if there are more suggestions to load or generate
+  // NEW: Check if there are more suggestions to load or generate - UPDATED logic
   const hasMoreSuggestions = computed(() => {
     // First check if we have more already generated suggestions to display
     if (allGeneratedSuggestions.value.length > displayedSuggestionsCount.value) {
       return true;
     }
     
-    // Then check if we can generate more suggestions
-    return !hasGeneratedAllSuggestions.value && canGenerateMeetups.value;
+    // Then check if we can generate more suggestions (haven't hit the batch limit)
+    return canGenerateMeetups.value && currentBatch.value < maxBatchesPerActivity.value;
   });
 
   // Generate a hash of user locations and activities to detect changes
@@ -101,11 +102,10 @@ export const useMeetyStore = defineStore('meety', () => {
         currentSession.value.meetupSuggestions = [];
       }
       
-      // NEW: Clear infinite scroll state
+      // NEW: Clear infinite scroll state - RESET for new generation
       allGeneratedSuggestions.value = [];
       displayedSuggestionsCount.value = 7;
-      hasGeneratedAllSuggestions.value = false;
-      currentBatch.value = 1;
+      currentBatch.value = 0; // Reset batch counter
 
       // Delete from database
       const { error: deleteError } = await supabase
@@ -280,6 +280,8 @@ export const useMeetyStore = defineStore('meety', () => {
       allGeneratedSuggestions.value = suggestions;
       if (suggestions.length > 0) {
         displayedSuggestionsCount.value = Math.min(7, suggestions.length);
+        // Calculate current batch based on existing suggestions
+        currentBatch.value = Math.ceil(suggestions.length / suggestionsPerBatch.value);
       }
 
       // Update tracking variables
@@ -292,7 +294,8 @@ export const useMeetyStore = defineStore('meety', () => {
       console.log('✅ Session data loaded successfully:', {
         users: users.length,
         connected: users.filter(u => u.connected).length,
-        suggestions: suggestions.length
+        suggestions: suggestions.length,
+        currentBatch: currentBatch.value
       });
 
     } catch (err) {
@@ -343,6 +346,8 @@ export const useMeetyStore = defineStore('meety', () => {
         allGeneratedSuggestions.value = suggestions;
         if (suggestions.length > 0) {
           displayedSuggestionsCount.value = Math.min(7, suggestions.length);
+          // Calculate current batch based on existing suggestions
+          currentBatch.value = Math.ceil(suggestions.length / suggestionsPerBatch.value);
         }
         
         // Update hash if we have suggestions
@@ -351,7 +356,7 @@ export const useMeetyStore = defineStore('meety', () => {
           lastUserCount.value = currentSession.value.users.length;
         }
         
-        console.log('✅ Suggestions loaded:', suggestions.length);
+        console.log('✅ Suggestions loaded:', suggestions.length, 'current batch:', currentBatch.value);
       }
     } catch (err) {
       console.error('❌ Error loading meetup suggestions:', err);
@@ -567,6 +572,7 @@ export const useMeetyStore = defineStore('meety', () => {
     }
   };
 
+  // UPDATED: Generate initial batch of suggestions
   const generateMeetupSuggestionsAction = async () => {
     if (!canGenerateMeetups.value || !currentSession.value) {
       console.log('❌ Cannot generate meetups - requirements not met');
@@ -586,7 +592,7 @@ export const useMeetyStore = defineStore('meety', () => {
     isLoading.value = true;
     
     try {
-      console.log('🎯 Starting meetup suggestion generation...');
+      console.log('🎯 Starting initial meetup suggestion generation...');
       console.log('Connected users:', connectedUsers.value.length);
       console.log('User details:', connectedUsers.value.map(u => ({
         name: u.name,
@@ -601,11 +607,14 @@ export const useMeetyStore = defineStore('meety', () => {
       // Wait a moment for database operation
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      console.log('🎯 Calculating optimal meetup locations...');
+      console.log('🎯 Generating initial batch of suggestions...');
       
-      // Generate initial batch of suggestions
-      const calculatedSuggestions = await generateMeetupSuggestions(currentSession.value.users, 25); // Generate 25 suggestions initially
-      console.log('✨ Generated suggestions:', calculatedSuggestions.length, 'places');
+      // Generate initial batch of suggestions (7 suggestions)
+      const calculatedSuggestions = await generateMeetupSuggestions(
+        currentSession.value.users, 
+        suggestionsPerBatch.value
+      );
+      console.log('✨ Generated initial suggestions:', calculatedSuggestions.length, 'places');
       
       if (calculatedSuggestions.length === 0) {
         console.log('⚠️ No suggestions generated');
@@ -645,8 +654,7 @@ export const useMeetyStore = defineStore('meety', () => {
       // Update tracking variables
       lastSuggestionHash.value = getUserConfigHash();
       lastUserCount.value = currentSession.value.users.length;
-      currentBatch.value = 1; // Reset batch counter
-      hasGeneratedAllSuggestions.value = calculatedSuggestions.length < 25; // If we got less than requested, we've hit the limit
+      currentBatch.value = 1; // Set to 1 after initial generation
 
       // Reload suggestions - this will trigger real-time updates for other users
       await loadMeetupSuggestions(currentSession.value.id);
@@ -660,7 +668,7 @@ export const useMeetyStore = defineStore('meety', () => {
     }
   };
 
-  // NEW: Infinite scroll method to load more suggestions
+  // NEW: Infinite scroll method to load more suggestions - UPDATED for true batching
   const loadMoreSuggestions = async () => {
     if (!hasMoreSuggestions.value || isLoadingMore.value || !currentSession.value) return;
 
@@ -673,7 +681,7 @@ export const useMeetyStore = defineStore('meety', () => {
       if (allGeneratedSuggestions.value.length > displayedSuggestionsCount.value) {
         // Just increase the displayed count
         const newCount = Math.min(
-          displayedSuggestionsCount.value + 7,
+          displayedSuggestionsCount.value + suggestionsPerBatch.value,
           allGeneratedSuggestions.value.length
         );
         displayedSuggestionsCount.value = newCount;
@@ -685,14 +693,14 @@ export const useMeetyStore = defineStore('meety', () => {
         return;
       }
       
-      // If we've displayed all generated suggestions but haven't hit the limit, generate more
-      if (!hasGeneratedAllSuggestions.value && canGenerateMeetups.value) {
+      // If we've displayed all generated suggestions but haven't hit the batch limit, generate more
+      if (currentBatch.value < maxBatchesPerActivity.value && canGenerateMeetups.value) {
         console.log('🎯 Generating more suggestions (batch', currentBatch.value + 1, ')...');
         
         // Generate next batch of suggestions
         const moreSuggestions = await generateMeetupSuggestions(
           currentSession.value.users, 
-          15 // Generate 15 more suggestions per batch
+          suggestionsPerBatch.value // Generate 7 more suggestions per batch
         );
         
         if (moreSuggestions.length > 0) {
@@ -735,7 +743,7 @@ export const useMeetyStore = defineStore('meety', () => {
               // Update local state
               allGeneratedSuggestions.value.push(...newSuggestions);
               displayedSuggestionsCount.value = Math.min(
-                displayedSuggestionsCount.value + 7,
+                displayedSuggestionsCount.value + suggestionsPerBatch.value,
                 allGeneratedSuggestions.value.length
               );
               
@@ -744,17 +752,14 @@ export const useMeetyStore = defineStore('meety', () => {
             }
           } else {
             console.log('⚠️ No new unique suggestions found');
-            hasGeneratedAllSuggestions.value = true;
+            currentBatch.value = maxBatchesPerActivity.value; // Stop generating
           }
         } else {
           console.log('⚠️ No more suggestions available');
-          hasGeneratedAllSuggestions.value = true;
+          currentBatch.value = maxBatchesPerActivity.value; // Stop generating
         }
-        
-        // Check if we got fewer suggestions than requested (hit the limit)
-        if (moreSuggestions.length < 15) {
-          hasGeneratedAllSuggestions.value = true;
-        }
+      } else {
+        console.log('⚠️ Reached maximum batch limit or cannot generate more');
       }
       
     } catch (err) {
