@@ -1,34 +1,34 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-    <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl">
-      <div class="p-4 sm:p-6 border-b border-gray-200">
-        <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2">📍 Select Your Location</h2>
-        <p class="text-sm sm:text-base text-gray-600">Search for a location or click directly on the map</p>
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-4xl w-full my-8 shadow-2xl">
+      <div class="p-6 border-b border-gray-200">
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">📍 Select Your Location</h2>
+        <p class="text-gray-600">Search for a location or click directly on the map</p>
       </div>
       
-      <div class="flex flex-col lg:flex-row h-[60vh] sm:h-[70vh]">
+      <div class="flex flex-col lg:flex-row h-[70vh] min-h-[500px]">
         <!-- Map Container -->
         <div class="flex-1 relative">
           <div 
             ref="mapContainer" 
-            class="w-full h-full min-h-[250px] sm:min-h-[300px]"
+            class="w-full h-full min-h-[300px]"
           ></div>
           
           <!-- Search Box Overlay -->
-          <div class="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-10">
+          <div class="absolute top-4 left-4 right-4 z-10">
             <div class="relative">
               <input
                 ref="searchInput"
                 type="text"
                 placeholder="Search for a location..."
-                class="w-full px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 bg-white border border-gray-300 rounded-xl shadow-lg focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
+                class="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-xl shadow-lg focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200"
               />
               <button
-                class="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-cosmic-500 hover:text-cosmic-600 transition-colors"
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-cosmic-500 hover:text-cosmic-600 transition-colors"
                 @click="getCurrentLocation"
                 title="Use current location"
               >
-                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
@@ -39,16 +39,16 @@
           <!-- Selected Location Info -->
           <div 
             v-if="selectedLocation" 
-            class="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 right-2 sm:right-4 z-10"
+            class="absolute bottom-4 left-4 right-4 z-10"
           >
-            <div class="bg-white rounded-xl p-3 sm:p-4 shadow-lg border border-gray-200">
-              <div class="flex items-start space-x-2 sm:space-x-3">
-                <div class="w-6 h-6 sm:w-8 sm:h-8 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span class="text-white text-xs sm:text-sm">✓</span>
+            <div class="bg-white rounded-xl p-4 shadow-lg border border-gray-200">
+              <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span class="text-white text-sm">✓</span>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="font-medium text-sm sm:text-base text-gray-800 truncate">{{ selectedLocation.address }}</div>
-                  <div class="text-xs sm:text-sm text-gray-500">
+                  <div class="font-medium text-gray-800 truncate">{{ selectedLocation.address }}</div>
+                  <div class="text-sm text-gray-500">
                     {{ selectedLocation.lat.toFixed(6) }}, {{ selectedLocation.lng.toFixed(6) }}
                   </div>
                 </div>
@@ -58,10 +58,10 @@
         </div>
 
         <!-- Activity Selection Panel -->
-        <div class="lg:w-80 p-4 sm:p-6 border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50">
-          <div class="mb-4 sm:mb-6">
-            <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-3">Preferred Activity</h3>
-            <div class="grid grid-cols-2 gap-2 sm:gap-3">
+        <div class="lg:w-80 p-6 border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50">
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">Preferred Activity</h3>
+            <div class="grid grid-cols-2 gap-3">
               <div
                 v-for="activity in ACTIVITY_TYPES"
                 :key="activity.id"
@@ -69,19 +69,19 @@
                 @click="selectedActivity = activity.id"
               >
                 <div
-                  class="border-2 rounded-xl p-2 sm:p-3 text-center"
+                  class="border-2 rounded-xl p-3 text-center"
                   :class="selectedActivity === activity.id 
                     ? 'border-cosmic-500 bg-cosmic-50' 
                     : 'border-gray-200 hover:border-gray-300 bg-white'"
                 >
-                  <div class="text-lg sm:text-xl mb-1">{{ activity.icon }}</div>
+                  <div class="text-xl mb-1">{{ activity.icon }}</div>
                   <div class="text-xs font-medium text-gray-700">{{ activity.name }}</div>
                 </div>
                 
                 <!-- Selected indicator -->
                 <div
                   v-if="selectedActivity === activity.id"
-                  class="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-5 sm:h-5 bg-cosmic-500 rounded-full flex items-center justify-center"
+                  class="absolute -top-2 -right-2 w-5 h-5 bg-cosmic-500 rounded-full flex items-center justify-center"
                 >
                   <span class="text-white text-xs">✓</span>
                 </div>
@@ -90,9 +90,9 @@
           </div>
 
           <!-- Instructions -->
-          <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 sm:p-4">
-            <h4 class="font-medium text-sm sm:text-base text-blue-800 mb-2">How to select location:</h4>
-            <ul class="text-xs sm:text-sm text-blue-700 space-y-1">
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <h4 class="font-medium text-blue-800 mb-2">How to select location:</h4>
+            <ul class="text-sm text-blue-700 space-y-1">
               <li>• Search in the box above</li>
               <li>• Click anywhere on the map</li>
               <li>• Use the location button for GPS</li>
@@ -102,15 +102,15 @@
       </div>
       
       <!-- Actions -->
-      <div class="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex space-x-2 sm:space-x-3">
+      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex space-x-3">
         <button
-          class="flex-1 bg-gray-200 text-gray-700 py-2 sm:py-3 px-4 sm:px-6 rounded-xl font-semibold hover:bg-gray-300 transition-all duration-200 text-sm sm:text-base"
+          class="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-300 transition-all duration-200"
           @click="$emit('close')"
         >
           Cancel
         </button>
         <button
-          class="flex-1 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-2 sm:py-3 px-4 sm:px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+          class="flex-1 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="!selectedLocation || !selectedActivity"
           @click="confirmSelection"
         >
