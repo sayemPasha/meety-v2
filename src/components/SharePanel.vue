@@ -41,18 +41,21 @@
           <div
             v-for="user in allUsers"
             :key="user.id"
-            class="flex items-center space-x-3 p-3 rounded-xl"
-            :class="user.connected ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-200'"
+            class="flex items-center space-x-3 p-3 rounded-xl border"
+            :class="user.connected 
+              ? 'bg-white border-emerald-300 shadow-sm' 
+              : 'bg-gray-50 border-gray-300'"
           >
             <div
               class="w-10 h-10 rounded-full flex items-center justify-center"
               :class="user.connected ? 'bg-emerald-500' : 'bg-gray-400'"
             >
-              <span class="text-white text-sm">{{ user.connected ? '✓' : '⏳' }}</span>
+              <span class="text-white text-sm font-semibold">{{ user.connected ? '✓' : '⏳' }}</span>
             </div>
             <div class="flex-1">
-              <div class="font-medium text-sm">{{ user.name }}</div>
-              <div class="text-xs text-gray-500">
+              <div class="font-semibold text-sm text-gray-900">{{ user.name }}</div>
+              <div class="text-xs font-medium"
+                   :class="user.connected ? 'text-emerald-700' : 'text-gray-600'">
                 {{ user.connected ? 'Ready to meet!' : 'Setting up location...' }}
               </div>
             </div>
