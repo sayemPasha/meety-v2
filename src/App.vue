@@ -5,9 +5,9 @@
       <div class="max-w-7xl mx-auto flex items-center justify-between">
         <div class="flex items-center space-x-3">
           <div class="relative">
-            <!-- Meety Logo with Glow Effect -->
-            <div class="absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full blur-lg opacity-60 animate-pulse-glow"></div>
-            <div class="relative w-16 h-16 flex items-center justify-center">
+            <!-- Meety Logo with Smaller Glow Effect -->
+            <div class="absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full blur-md opacity-50 animate-pulse-glow"></div>
+            <div class="relative w-20 h-20 flex items-center justify-center">
               <img 
                 src="/meety-transparent.png" 
                 alt="Meety Logo" 
