@@ -5,8 +5,8 @@
       <div class="max-w-7xl mx-auto flex items-center justify-between">
         <div class="flex items-center space-x-3">
           <div class="relative">
-            <!-- Meety Logo with Smaller Glow Effect using darker purple colors -->
-            <div class="absolute inset-0 bg-gradient-to-br from-dark-purple-500 to-dark-purple-700 rounded-full blur-md opacity-50 animate-pulse-glow"></div>
+            <!-- Meety Logo with Smaller Glow Effect -->
+            <div class="absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full blur-md opacity-50 animate-pulse-glow"></div>
             <div class="relative w-20 h-20 flex items-center justify-center">
               <img 
                 src="/meety-transparent.png" 
@@ -32,7 +32,7 @@
       <div class="max-w-7xl mx-auto">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          <!-- Node Visualization Panel - PRESERVE ORIGINAL BACKGROUND -->
+          <!-- Node Visualization Panel -->
           <div class="lg:col-span-2">
             <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-6 shadow-2xl">
               <div class="node-container relative h-[500px] md:h-[600px]">
@@ -44,7 +44,7 @@
           <!-- Control Panel -->
           <div class="space-y-6">
             
-            <!-- User Status Panel - PRESERVE ORIGINAL BACKGROUND -->
+            <!-- User Status -->
             <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 shadow-xl">
               <div class="flex items-center space-x-3 mb-4">
                 <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
@@ -87,10 +87,10 @@
               </button>
             </div>
 
-            <!-- Share Panel - PRESERVE ORIGINAL BACKGROUND -->
+            <!-- Share Panel -->
             <SharePanel v-if="store.shouldShowShareLink" />
 
-            <!-- Instructions Panel - PRESERVE ORIGINAL BACKGROUND -->
+            <!-- Instructions -->
             <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 shadow-xl">
               <h3 class="font-bold text-lg text-white mb-3">How it works</h3>
               <div class="space-y-3 text-sm text-gray-300">
@@ -220,6 +220,6 @@ onUnmounted(() => {
 
 <style scoped>
 .node-container {
-  background: radial-gradient(circle at center, rgba(236, 72, 153, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle at center, rgba(168, 85, 168, 0.1) 0%, transparent 70%);
 }
 </style>

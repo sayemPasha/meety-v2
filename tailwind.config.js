@@ -54,12 +54,6 @@ export default {
           700: '#0f766e',
           800: '#115e59',
           900: '#134e4a',
-        },
-        // Add the darker purple colors you specified
-        'dark-purple': {
-          500: '#ec4899', // Pink-500 equivalent
-          600: '#d946ef', // Fuchsia-500 equivalent  
-          700: '#9333ea', // Purple-600 equivalent
         }
       },
       animation: {
