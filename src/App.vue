@@ -4,8 +4,16 @@
     <header class="relative z-30 p-6">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
         <div class="flex items-center space-x-3">
-          <div class="w-12 h-12 bg-gradient-to-br from-stellar-400 to-stellar-600 rounded-full flex items-center justify-center">
-            <span class="text-white text-xl font-bold">M</span>
+          <div class="relative">
+            <!-- Meety Logo with Glow Effect -->
+            <div class="absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full blur-lg opacity-60 animate-pulse-glow"></div>
+            <div class="relative w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
+              <img 
+                src="/meety-transparent.png" 
+                alt="Meety Logo" 
+                class="w-10 h-10 object-contain"
+              />
+            </div>
           </div>
           <div>
             <h1 class="text-2xl font-bold text-white">Meety</h1>
