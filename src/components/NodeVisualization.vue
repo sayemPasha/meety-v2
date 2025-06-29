@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full h-full overflow-hidden">
+  <div class="relative w-full h-full overflow-hidden" ref="containerRef">
     <!-- SVG for Connection Lines -->
     <svg 
       class="absolute inset-0 w-full h-full pointer-events-none z-10"
@@ -339,7 +339,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useMeetyStore } from '@/stores/meetyStore';
 import { ACTIVITY_TYPES } from '@/types';
 import LocationVisualizationMap from './LocationVisualizationMap.vue';
@@ -347,6 +347,7 @@ import LocationVisualizationMap from './LocationVisualizationMap.vue';
 const store = useMeetyStore();
 
 // Reactive refs
+const containerRef = ref<HTMLElement>();
 const containerWidth = ref(800);
 const containerHeight = ref(600);
 const centerNode = ref<HTMLElement>();
@@ -451,17 +452,22 @@ const handleImageError = (event: Event) => {
 };
 
 const updateContainerSize = () => {
-  const container = document.querySelector('.node-container');
-  if (container) {
-    containerWidth.value = container.clientWidth;
-    containerHeight.value = container.clientHeight;
+  if (containerRef.value) {
+    const rect = containerRef.value.getBoundingClientRect();
+    containerWidth.value = rect.width;
+    containerHeight.value = rect.height;
+    console.log('📐 Container size updated:', { width: containerWidth.value, height: containerHeight.value });
   }
 };
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
+  await nextTick();
   updateContainerSize();
   window.addEventListener('resize', updateContainerSize);
+  
+  // Update size again after a short delay to ensure proper initialization
+  setTimeout(updateContainerSize, 100);
 });
 
 onUnmounted(() => {
@@ -472,6 +478,11 @@ onUnmounted(() => {
 watch(users, () => {
   // This will trigger reactivity for positions
 }, { deep: true });
+
+// Watch for container size changes
+watch([containerWidth, containerHeight], () => {
+  console.log('📐 Container dimensions changed:', { width: containerWidth.value, height: containerHeight.value });
+});
 
 // Emits
 const emit = defineEmits<{
@@ -484,6 +495,11 @@ const emit = defineEmits<{
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.node-container {
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
   overflow: hidden;
 }
 
