@@ -56,48 +56,48 @@
     </div>
   </div>
 
-  <!-- Meetup Suggestions Modal - REDUCED WIDTH -->
+  <!-- Meetup Suggestions Modal - RESPONSIVE -->
   <Teleport to="body">
     <div
       v-if="showMeetupModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4"
       @click="closeMeetupModal"
     >
       <div 
-        class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl"
+        class="bg-white rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[85vh] overflow-hidden shadow-2xl"
         @click.stop
       >
-        <div class="p-6 border-b border-gray-200">
+        <div class="p-4 sm:p-6 border-b border-gray-200">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-2xl font-bold text-gray-800 mb-2">🎯 Suggested Meetup Locations</h2>
-              <p class="text-gray-600">
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2">🎯 Suggested Meetup Locations</h2>
+              <p class="text-sm sm:text-base text-gray-600">
                 {{ connectedUsers.length === 1 ? 'Places near your location' : 'Based on everyone\'s preferences and locations' }}
               </p>
             </div>
             <!-- Close button -->
             <button
-              class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+              class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
               @click="closeMeetupModal"
             >
-              <span class="text-gray-600">✕</span>
+              <span class="text-gray-600 text-sm sm:text-base">✕</span>
             </button>
           </div>
         </div>
         
-        <div class="p-6 space-y-6 max-h-96 overflow-y-auto">
+        <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-h-80 sm:max-h-96 overflow-y-auto">
           <div
             v-for="(suggestion, index) in meetupSuggestions"
             :key="suggestion.id"
             class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
           >
-            <!-- Alternating Layout -->
+            <!-- Responsive Layout -->
             <div 
-              class="flex"
-              :class="index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'"
+              class="flex flex-col sm:flex-row"
+              :class="index % 2 === 0 ? 'sm:flex-row' : 'sm:flex-row-reverse'"
             >
               <!-- Image Section -->
-              <div class="w-40 h-28 flex-shrink-0">
+              <div class="w-full sm:w-40 h-32 sm:h-28 flex-shrink-0">
                 <div 
                   v-if="suggestion.photoUrl"
                   class="w-full h-full overflow-hidden"
@@ -113,27 +113,27 @@
                   v-else
                   class="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center"
                 >
-                  <span class="text-3xl">{{ getActivityIcon(suggestion.type) }}</span>
+                  <span class="text-2xl sm:text-3xl">{{ getActivityIcon(suggestion.type) }}</span>
                 </div>
               </div>
 
               <!-- Content Section -->
-              <div class="flex-1 p-4">
+              <div class="flex-1 p-3 sm:p-4">
                 <!-- Title and Rating -->
                 <div class="flex items-start justify-between mb-2">
-                  <h3 class="font-bold text-lg text-gray-900 leading-tight">{{ suggestion.name }}</h3>
-                  <div class="flex items-center space-x-1 ml-3">
+                  <h3 class="font-bold text-base sm:text-lg text-gray-900 leading-tight">{{ suggestion.name }}</h3>
+                  <div class="flex items-center space-x-1 ml-2 sm:ml-3">
                     <span class="text-yellow-500 text-sm">⭐</span>
                     <span class="font-semibold text-sm text-gray-800">{{ suggestion.rating.toFixed(1) }}</span>
                   </div>
                 </div>
                 
                 <!-- Address -->
-                <p class="text-gray-600 text-sm mb-3 leading-relaxed">{{ suggestion.location.address }}</p>
+                <p class="text-gray-600 text-sm mb-2 sm:mb-3 leading-relaxed">{{ suggestion.location.address }}</p>
                 
                 <!-- Status and Info -->
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-3">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                  <div class="flex items-center space-x-2 sm:space-x-3">
                     <!-- Open Status -->
                     <div v-if="suggestion.openNow !== undefined" class="flex items-center space-x-1">
                       <div 
@@ -163,7 +163,7 @@
                   
                   <!-- Action Button -->
                   <button
-                    class="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
+                    class="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium w-full sm:w-auto"
                     @click="openInMaps(suggestion)"
                   >
                     View on Map
@@ -174,10 +174,10 @@
           </div>
 
           <!-- No suggestions message -->
-          <div v-if="meetupSuggestions.length === 0" class="text-center py-8">
-            <div class="text-6xl mb-4">🤔</div>
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">No suggestions yet</h3>
-            <p class="text-gray-600">
+          <div v-if="meetupSuggestions.length === 0" class="text-center py-6 sm:py-8">
+            <div class="text-4xl sm:text-6xl mb-4">🤔</div>
+            <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-2">No suggestions yet</h3>
+            <p class="text-sm sm:text-base text-gray-600">
               {{ connectedUsers.length === 0 
                 ? 'Set your location and activity to get started.' 
                 : 'Make sure all users have set their locations and activities.' 
@@ -185,7 +185,7 @@
             </p>
             <button
               v-if="canGenerateMeetups"
-              class="mt-4 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+              class="mt-4 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-2 sm:py-3 px-4 sm:px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
               @click="generateSuggestions"
               :disabled="store.isLoading"
             >
@@ -194,32 +194,32 @@
           </div>
         </div>
         
-        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-          <div class="text-sm text-gray-600">
+        <div class="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+          <div class="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
             {{ connectedUsers.length === 1 
               ? `Showing ${meetupSuggestions.length} suggestion${meetupSuggestions.length !== 1 ? 's' : ''} near you`
               : `Showing ${meetupSuggestions.length} suggestion${meetupSuggestions.length !== 1 ? 's' : ''} for ${connectedUsers.length} users`
             }}
           </div>
-          <div class="flex items-center space-x-3">
+          <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3">
             <!-- Check Locations Button -->
             <button
               v-if="meetupSuggestions.length > 0"
-              class="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200"
+              class="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200 text-sm"
               @click="showLocationMap = true"
             >
               🗺️ Check Locations
             </button>
             <button
               v-if="canGenerateMeetups"
-              class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200"
+              class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200 text-sm"
               @click="refreshSuggestions"
               :disabled="store.isLoading"
             >
               {{ store.isLoading ? '🔄 Refreshing...' : '🔄 Refresh' }}
             </button>
             <button
-              class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+              class="w-full sm:w-auto bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-2 sm:py-3 px-4 sm:px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
               @click="closeMeetupModal"
             >
               Close

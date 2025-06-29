@@ -1,33 +1,33 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-    <div class="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-      <div class="p-6 border-b border-gray-200">
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
+    <div class="bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl">
+      <div class="p-4 sm:p-6 border-b border-gray-200">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">🗺️ Location Visualization</h2>
-            <p class="text-gray-600">User locations and suggested meetup spots</p>
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2">🗺️ Location Visualization</h2>
+            <p class="text-sm sm:text-base text-gray-600">User locations and suggested meetup spots</p>
           </div>
           <button
-            class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+            class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
             @click="$emit('close')"
           >
-            <span class="text-gray-600">✕</span>
+            <span class="text-gray-600 text-sm sm:text-base">✕</span>
           </button>
         </div>
       </div>
       
-      <div class="flex flex-col lg:flex-row h-[70vh]">
+      <div class="flex flex-col lg:flex-row h-[60vh] sm:h-[70vh]">
         <!-- Map Container -->
         <div class="flex-1 relative">
           <div 
             ref="mapContainer" 
-            class="w-full h-full min-h-[400px]"
+            class="w-full h-full min-h-[300px] sm:min-h-[400px]"
           ></div>
 
           <!-- Statistics Panel -->
-          <div class="absolute bottom-4 left-4 bg-white rounded-xl p-4 shadow-lg border border-gray-200 z-10 max-w-sm">
-            <h3 class="font-semibold text-gray-800 mb-3">Distance Analysis</h3>
-            <div class="space-y-2 text-sm">
+          <div class="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 bg-white rounded-xl p-3 sm:p-4 shadow-lg border border-gray-200 z-10 max-w-xs sm:max-w-sm">
+            <h3 class="font-semibold text-sm sm:text-base text-gray-800 mb-2 sm:mb-3">Distance Analysis</h3>
+            <div class="space-y-1 sm:space-y-2 text-xs sm:text-sm">
               <div v-if="centerPoint">
                 <div class="font-medium text-gray-700">Median Center Point:</div>
                 <div class="text-gray-600">{{ centerPoint.lat.toFixed(6) }}, {{ centerPoint.lng.toFixed(6) }}</div>
@@ -45,32 +45,32 @@
         </div>
 
         <!-- Info Panel -->
-        <div class="lg:w-80 p-6 border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50 overflow-y-auto">
+        <div class="lg:w-80 p-4 sm:p-6 border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50 overflow-y-auto">
           <!-- User Locations -->
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">👥 User Locations</h3>
-            <div class="space-y-3">
+          <div class="mb-4 sm:mb-6">
+            <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-3">👥 User Locations</h3>
+            <div class="space-y-2 sm:space-y-3">
               <div
                 v-for="(user, index) in connectedUsers"
                 :key="user.id"
-                class="bg-white rounded-lg p-3 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                class="bg-white rounded-lg p-2 sm:p-3 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
                 @click="zoomToLocation(user.location!.lat, user.location!.lng, user.name)"
               >
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-2 sm:space-x-3">
                   <div 
-                    class="w-4 h-4 rounded-full"
+                    class="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
                     :style="{ backgroundColor: user.color }"
                   ></div>
                   <div class="flex-1 min-w-0">
-                    <div class="font-medium text-sm text-gray-800">{{ user.name }}</div>
+                    <div class="font-medium text-xs sm:text-sm text-gray-800">{{ user.name }}</div>
                     <div class="text-xs text-gray-500 truncate">{{ user.location?.address }}</div>
                     <div class="text-xs text-gray-400">
                       {{ user.location?.lat.toFixed(4) }}, {{ user.location?.lng.toFixed(4) }}
                     </div>
                   </div>
-                  <div class="text-lg">{{ getActivityIcon(user.activity) }}</div>
+                  <div class="text-sm sm:text-lg">{{ getActivityIcon(user.activity) }}</div>
                 </div>
-                <div class="mt-2 text-xs text-blue-600 font-medium">
+                <div class="mt-1 sm:mt-2 text-xs text-blue-600 font-medium">
                   📍 Click to zoom to location
                 </div>
               </div>
@@ -79,35 +79,35 @@
 
           <!-- Meetup Suggestions -->
           <div>
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">🎯 Meetup Suggestions</h3>
-            <div class="space-y-3">
+            <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-3">🎯 Meetup Suggestions</h3>
+            <div class="space-y-2 sm:space-y-3">
               <div
                 v-for="suggestion in meetupSuggestions"
                 :key="suggestion.id"
-                class="bg-white rounded-lg p-3 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                class="bg-white rounded-lg p-2 sm:p-3 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
                 @click="zoomToLocation(suggestion.location.lat, suggestion.location.lng, suggestion.name)"
               >
-                <div class="flex items-start space-x-3">
-                  <div class="w-4 h-4 bg-red-500 rounded-full mt-1 flex-shrink-0"></div>
+                <div class="flex items-start space-x-2 sm:space-x-3">
+                  <div class="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded-full mt-1 flex-shrink-0"></div>
                   <div class="flex-1 min-w-0">
-                    <div class="font-medium text-sm text-gray-800">{{ suggestion.name }}</div>
+                    <div class="font-medium text-xs sm:text-sm text-gray-800">{{ suggestion.name }}</div>
                     <div class="text-xs text-gray-500 truncate">{{ suggestion.location.address }}</div>
                     <div class="text-xs text-gray-400">
                       {{ suggestion.location.lat.toFixed(4) }}, {{ suggestion.location.lng.toFixed(4) }}
                     </div>
-                    <div class="flex items-center space-x-2 mt-1">
-                      <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
+                    <div class="flex items-center space-x-1 sm:space-x-2 mt-1">
+                      <span class="text-xs bg-yellow-100 text-yellow-700 px-1 sm:px-2 py-1 rounded">
                         ⭐ {{ suggestion.rating.toFixed(1) }}
                       </span>
-                      <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                      <span class="text-xs bg-blue-100 text-blue-700 px-1 sm:px-2 py-1 rounded">
                         📍 {{ suggestion.averageDistance.toFixed(1) }}km avg
                       </span>
                     </div>
-                    <div class="mt-2 text-xs text-blue-600 font-medium">
+                    <div class="mt-1 sm:mt-2 text-xs text-blue-600 font-medium">
                       📍 Click to zoom to location
                     </div>
                   </div>
-                  <div class="text-lg">{{ getActivityIcon(suggestion.type) }}</div>
+                  <div class="text-sm sm:text-lg">{{ getActivityIcon(suggestion.type) }}</div>
                 </div>
               </div>
             </div>
@@ -116,12 +116,12 @@
       </div>
       
       <!-- Actions -->
-      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-        <div class="text-sm text-gray-600">
+      <div class="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+        <div class="text-xs sm:text-sm text-gray-600">
           Visualizing {{ connectedUsers.length }} users and {{ meetupSuggestions.length }} suggestions
         </div>
         <button
-          class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+          class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-2 sm:py-3 px-4 sm:px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
           @click="$emit('close')"
         >
           Close Map
