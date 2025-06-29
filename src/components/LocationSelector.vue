@@ -21,7 +21,7 @@
                 ref="searchInput"
                 type="text"
                 placeholder="Search for a location..."
-                class="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-xl shadow-lg focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200"
+                class="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-xl shadow-lg focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
               />
               <button
                 class="absolute right-3 top-1/2 transform -translate-y-1/2 text-cosmic-500 hover:text-cosmic-600 transition-colors"
@@ -68,7 +68,7 @@
                 type="text"
                 placeholder="Enter your name..."
                 maxlength="30"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200"
+                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200 text-gray-800 placeholder-gray-400"
               />
               <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
                 {{ userName.length }}/30
@@ -186,7 +186,10 @@ let geocoder: google.maps.Geocoder | null = null;
 onMounted(() => {
   const currentUser = store.currentUser;
   if (currentUser) {
-    userName.value = currentUser.name || '';
+    // Only pre-fill if it's not a default name
+    if (currentUser.name && !currentUser.name.startsWith('User ') && currentUser.name !== 'Guest User') {
+      userName.value = currentUser.name;
+    }
     selectedActivity.value = currentUser.activity || '';
     if (currentUser.location) {
       selectedLocation.value = currentUser.location;
@@ -448,5 +451,24 @@ const emit = defineEmits<{
 .activity-grid::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 2px;
+}
+
+/* Ensure placeholder text is visible */
+input::placeholder {
+  color: #9ca3af !important;
+  opacity: 1;
+}
+
+input::-webkit-input-placeholder {
+  color: #9ca3af !important;
+}
+
+input::-moz-placeholder {
+  color: #9ca3af !important;
+  opacity: 1;
+}
+
+input:-ms-input-placeholder {
+  color: #9ca3af !important;
 }
 </style>
