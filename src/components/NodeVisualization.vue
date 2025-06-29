@@ -6,11 +6,10 @@
       :viewBox="`0 0 ${containerWidth} ${containerHeight}`"
     >
       <!-- Connection lines from connected users to center -->
-      <g v-for="(user, index) in users" :key="`line-${user.id}`">
+      <g v-for="(user, index) in connectedUsers" :key="`line-${user.id}`">
         <line
-          v-if="user.connected"
-          :x1="getUserPosition(index).x"
-          :y1="getUserPosition(index).y"
+          :x1="getUserPosition(users.findIndex(u => u.id === user.id)).x"
+          :y1="getUserPosition(users.findIndex(u => u.id === user.id)).y"
           :x2="centerPosition.x"
           :y2="centerPosition.y"
           stroke="url(#connectionGradient)"
@@ -18,18 +17,19 @@
           stroke-dasharray="8,4"
           class="animate-connection-flow"
           :style="{ 
-            animationDelay: `${index * 0.3}s`
+            animationDelay: `${index * 0.3}s`,
+            opacity: user.connected ? 1 : 0
           }"
         />
         
         <!-- Animated data packets -->
         <circle
-          v-if="user.connected"
           r="4"
           fill="#3b82f6"
           class="animate-data-flow"
           :style="{ 
-            animationDelay: `${index * 0.5}s`
+            animationDelay: `${index * 0.5}s`,
+            opacity: user.connected ? 1 : 0
           }"
         >
           <animateMotion
@@ -39,7 +39,7 @@
           >
             <mpath>
               <path 
-                :d="`M ${getUserPosition(index).x} ${getUserPosition(index).y} L ${centerPosition.x} ${centerPosition.y}`"
+                :d="`M ${getUserPosition(users.findIndex(u => u.id === user.id)).x} ${getUserPosition(users.findIndex(u => u.id === user.id)).y} L ${centerPosition.x} ${centerPosition.y}`"
               />
             </mpath>
           </animateMotion>
