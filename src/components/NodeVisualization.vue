@@ -87,7 +87,7 @@
         
         <div class="p-6 space-y-6 max-h-96 overflow-y-auto">
           <div
-            v-for="(suggestion, index) in meetupSuggestions"
+            v-for="(suggestion, index) in displayedSuggestions"
             :key="suggestion.id"
             class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
           >
@@ -173,8 +173,19 @@
             </div>
           </div>
 
+          <!-- Load More Button -->
+          <div v-if="hasMoreSuggestions" class="text-center py-4">
+            <button
+              class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-8 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              @click="loadMoreSuggestions"
+              :disabled="store.isLoadingMore"
+            >
+              {{ store.isLoadingMore ? '🔄 Loading...' : `📄 Load More (${allGeneratedSuggestions.length - displayedSuggestions.length} remaining)` }}
+            </button>
+          </div>
+
           <!-- No suggestions message -->
-          <div v-if="meetupSuggestions.length === 0" class="text-center py-8">
+          <div v-if="displayedSuggestions.length === 0" class="text-center py-8">
             <div class="text-6xl mb-4">🤔</div>
             <h3 class="text-lg font-semibold text-gray-800 mb-2">No suggestions yet</h3>
             <p class="text-gray-600">
@@ -197,14 +208,14 @@
         <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
           <div class="text-sm text-gray-600">
             {{ connectedUsers.length === 1 
-              ? `Showing ${meetupSuggestions.length} suggestion${meetupSuggestions.length !== 1 ? 's' : ''} near you`
-              : `Showing ${meetupSuggestions.length} suggestion${meetupSuggestions.length !== 1 ? 's' : ''} for ${connectedUsers.length} users`
+              ? `Showing ${displayedSuggestions.length} of ${allGeneratedSuggestions.length} suggestion${allGeneratedSuggestions.length !== 1 ? 's' : ''} near you`
+              : `Showing ${displayedSuggestions.length} of ${allGeneratedSuggestions.length} suggestion${allGeneratedSuggestions.length !== 1 ? 's' : ''} for ${connectedUsers.length} users`
             }}
           </div>
           <div class="flex items-center space-x-3">
             <!-- Check Locations Button -->
             <button
-              v-if="meetupSuggestions.length > 0"
+              v-if="displayedSuggestions.length > 0"
               class="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200"
               @click="showLocationMap = true"
             >
@@ -235,7 +246,7 @@
     <LocationVisualizationMap
       v-if="showLocationMap"
       :users="users"
-      :meetup-suggestions="meetupSuggestions"
+      :meetup-suggestions="displayedSuggestions"
       @close="showLocationMap = false"
     />
   </Teleport>
@@ -261,8 +272,12 @@ const showLocationMap = ref(false);
 const users = computed(() => store.currentSession?.users || []);
 const currentUserId = computed(() => store.currentUserId);
 const canGenerateMeetups = computed(() => store.canGenerateMeetups);
-const meetupSuggestions = computed(() => store.currentSession?.meetupSuggestions || []);
 const connectedUsers = computed(() => store.connectedUsers);
+
+// NEW: Use displayedSuggestions from store instead of all suggestions
+const displayedSuggestions = computed(() => store.displayedSuggestions);
+const hasMoreSuggestions = computed(() => store.hasMoreSuggestions);
+const allGeneratedSuggestions = computed(() => store.currentSession?.meetupSuggestions || []);
 
 const centerPosition = computed(() => ({
   x: containerWidth.value / 2,
@@ -315,6 +330,12 @@ const generateSuggestions = async () => {
 const refreshSuggestions = async () => {
   console.log('🔄 Manually refreshing suggestions...');
   await store.generateMeetupSuggestions();
+};
+
+// NEW: Load more suggestions method
+const loadMoreSuggestions = async () => {
+  console.log('📄 Loading more suggestions...');
+  await store.loadMoreSuggestions();
 };
 
 const closeMeetupModal = () => {

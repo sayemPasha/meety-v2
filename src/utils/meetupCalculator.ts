@@ -259,8 +259,8 @@ function getGooglePlacesType(activityType: string): string {
   return typeMapping[activityType] || 'restaurant';
 }
 
-// Generate meetup suggestions - UPDATED to handle single user
-export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSuggestion[]> {
+// Generate meetup suggestions - UPDATED to handle single user and accept maxResults parameter
+export async function generateMeetupSuggestions(users: User[], maxResults: number = 7): Promise<MeetupSuggestion[]> {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
   if (connectedUsers.length < 1) {
@@ -290,6 +290,9 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
         document.createElement('div')
       );
       
+      // Calculate suggestions per activity type based on maxResults
+      const suggestionsPerActivity = Math.ceil(maxResults / Math.max(preferredActivities.length + 2, 4)); // +2 for restaurant and cafe fallbacks
+      
       // Search for places for each preferred activity type
       for (const activityType of preferredActivities.slice(0, 4)) {
         const placesForActivity = await searchGooglePlaces(
@@ -298,7 +301,7 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
           getGooglePlacesType(activityType),
           activityType,
           users,
-          10
+          suggestionsPerActivity
         );
         allSuggestions.push(...placesForActivity);
       }
@@ -311,7 +314,7 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
           'restaurant',
           'restaurant',
           users,
-          15
+          suggestionsPerActivity * 2 // More restaurants
         );
         allSuggestions.push(...restaurantPlaces);
       }
@@ -324,17 +327,17 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
           'cafe',
           'coffee',
           users,
-          10
+          suggestionsPerActivity
         );
         allSuggestions.push(...cafePlaces);
       }
     } catch (error) {
       console.error('Google Places API error, falling back to mock data:', error);
-      return generateMockSuggestions(users, centerPoint, preferredActivities);
+      return generateMockSuggestions(users, centerPoint, preferredActivities, maxResults);
     }
   } else {
     console.log('Google Places API not available, using mock data');
-    return generateMockSuggestions(users, centerPoint, preferredActivities);
+    return generateMockSuggestions(users, centerPoint, preferredActivities, maxResults);
   }
 
   // Remove duplicates based on place ID or name+location
@@ -362,7 +365,7 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
       
       return centerDistanceDiff;
     })
-    .slice(0, 7); // Return top 7 suggestions
+    .slice(0, maxResults); // Return requested number of suggestions
 
   console.log('✨ Final suggestions (sorted by distance to center):', sortedSuggestions.map(s => ({
     name: s.name,
@@ -479,31 +482,33 @@ function searchGooglePlaces(
   });
 }
 
-// Fallback mock suggestions when Google Places API is not available - UPDATED for single user
+// Fallback mock suggestions when Google Places API is not available - UPDATED for single user and maxResults
 function generateMockSuggestions(
   users: User[], 
   centerPoint: Location, 
-  preferredActivities: string[]
+  preferredActivities: string[],
+  maxResults: number = 7
 ): MeetupSuggestion[] {
   console.log('🎭 Generating mock suggestions (Google Places API not available)');
   
   const suggestions: MeetupSuggestion[] = [];
+  const suggestionsPerActivity = Math.ceil(maxResults / Math.max(preferredActivities.length + 2, 4));
   
   // Create suggestions for each preferred activity type
   for (const activityType of preferredActivities.slice(0, 3)) {
-    const placesForActivity = generateMockPlaces(centerPoint, activityType, users, 3);
+    const placesForActivity = generateMockPlaces(centerPoint, activityType, users, suggestionsPerActivity);
     suggestions.push(...placesForActivity);
   }
 
   // Always add restaurants
   if (!preferredActivities.includes('restaurant')) {
-    const restaurantPlaces = generateMockPlaces(centerPoint, 'restaurant', users, 4);
+    const restaurantPlaces = generateMockPlaces(centerPoint, 'restaurant', users, suggestionsPerActivity * 2);
     suggestions.push(...restaurantPlaces);
   }
 
   // Add cafes
   if (!preferredActivities.includes('coffee')) {
-    const cafePlaces = generateMockPlaces(centerPoint, 'coffee', users, 2);
+    const cafePlaces = generateMockPlaces(centerPoint, 'coffee', users, suggestionsPerActivity);
     suggestions.push(...cafePlaces);
   }
 
@@ -528,7 +533,7 @@ function generateMockSuggestions(
       
       return centerDistanceDiff;
     })
-    .slice(0, 7); // Return top 7 suggestions
+    .slice(0, maxResults); // Return requested number of suggestions
 }
 
 // Generate mock places around a location
@@ -536,35 +541,43 @@ function generateMockPlaces(centerLocation: Location, activityType: string, user
   const placeTemplates = {
     restaurant: [
       'Central Bistro', 'The Meeting Place', 'Midpoint Café', 'Fusion Kitchen', 'Corner Table',
-      'Downtown Diner', 'City Grill', 'Metro Restaurant', 'Urban Eatery', 'Plaza Kitchen'
+      'Downtown Diner', 'City Grill', 'Metro Restaurant', 'Urban Eatery', 'Plaza Kitchen',
+      'Riverside Bistro', 'Garden Restaurant', 'Skyline Diner', 'Harbor Grill', 'Summit Café'
     ],
     outdoor: [
       'Central Park', 'Riverside Walk', 'Community Garden', 'Outdoor Plaza', 'Green Space',
-      'City Park', 'Nature Trail', 'Public Garden', 'Waterfront Park', 'Recreation Area'
+      'City Park', 'Nature Trail', 'Public Garden', 'Waterfront Park', 'Recreation Area',
+      'Botanical Garden', 'Lakeside Park', 'Mountain View Trail', 'Sunset Point', 'Forest Walk'
     ],
     sports: [
       'Sports Bar & Grill', 'Game Zone', 'Athletic Club', 'Sports Lounge', 'Victory Pub',
-      'Champions Bar', 'Stadium Grill', 'Sports Center', 'Active Zone', 'Fitness Hub'
+      'Champions Bar', 'Stadium Grill', 'Sports Center', 'Active Zone', 'Fitness Hub',
+      'Arena Sports Bar', 'Playoff Lounge', 'Court Side Café', 'Field House', 'Training Ground'
     ],
     entertainment: [
       'Cinema Complex', 'Entertainment Center', 'Arcade Zone', 'Theater District', 'Fun Palace',
-      'Movie Theater', 'Gaming Lounge', 'Entertainment Hub', 'Activity Center', 'Amusement Zone'
+      'Movie Theater', 'Gaming Lounge', 'Entertainment Hub', 'Activity Center', 'Amusement Zone',
+      'Comedy Club', 'Live Music Venue', 'Performance Hall', 'Arts Theater', 'Concert Hall'
     ],
     shopping: [
       'Shopping Center', 'Market Square', 'Retail Plaza', 'Mall Central', 'Boutique District',
-      'Shopping Mall', 'Retail Hub', 'Market Place', 'Commercial Center', 'Shopping District'
+      'Shopping Mall', 'Retail Hub', 'Market Place', 'Commercial Center', 'Shopping District',
+      'Fashion Plaza', 'Trade Center', 'Outlet Mall', 'Artisan Market', 'Designer District'
     ],
     coffee: [
       'Central Perk', 'Coffee Corner', 'Bean There', 'Brew Point', 'Café Central',
-      'Coffee House', 'Espresso Bar', 'Café Metro', 'Coffee Station', 'Brew & Bean'
+      'Coffee House', 'Espresso Bar', 'Café Metro', 'Coffee Station', 'Brew & Bean',
+      'Roastery Café', 'Morning Grind', 'Latte Lounge', 'Caffeine Corner', 'Steam & Bean'
     ],
     culture: [
       'Art Gallery', 'Cultural Center', 'Museum Quarter', 'Heritage Hall', 'Creative Space',
-      'Art Museum', 'Cultural Hub', 'Gallery District', 'Arts Center', 'Creative Quarter'
+      'Art Museum', 'Cultural Hub', 'Gallery District', 'Arts Center', 'Creative Quarter',
+      'History Museum', 'Science Center', 'Modern Art Gallery', 'Cultural Institute', 'Exhibition Hall'
     ],
     nightlife: [
       'Night Spot', 'Evening Lounge', 'After Hours', 'Night Scene', 'Late Night Café',
-      'Night Club', 'Cocktail Bar', 'Evening Bar', 'Night Lounge', 'After Dark'
+      'Night Club', 'Cocktail Bar', 'Evening Bar', 'Night Lounge', 'After Dark',
+      'Rooftop Bar', 'Jazz Club', 'Wine Bar', 'Speakeasy', 'Dance Club'
     ]
   };
 
