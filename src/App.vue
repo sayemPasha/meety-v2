@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen">
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-space-900 to-cosmic-900">
     <!-- Header -->
     <header class="relative z-30 p-6">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
@@ -220,6 +220,6 @@ onUnmounted(() => {
 
 <style scoped>
 .node-container {
-  background: radial-gradient(circle at center, rgba(168, 85, 168, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
 }
 </style>
