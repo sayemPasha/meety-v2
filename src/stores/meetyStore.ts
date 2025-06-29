@@ -16,11 +16,6 @@ export const useMeetyStore = defineStore('meety', () => {
   const lastSuggestionHash = ref<string>(''); // Track when suggestions need updating
   const lastUserCount = ref<number>(0); // Track user count changes
   const isGeneratingSuggestions = ref(false); // Prevent concurrent generation
-  
-  // NEW: Pagination state for suggestions
-  const allGeneratedSuggestions = ref<MeetupSuggestion[]>([]); // Store all generated suggestions
-  const displayedSuggestionsCount = ref(7); // How many to show initially
-  const isLoadingMore = ref(false); // Loading state for load more
 
   // Computed properties
   const connectedUsers = computed(() => 
@@ -39,16 +34,6 @@ export const useMeetyStore = defineStore('meety', () => {
 
   const shouldShowShareLink = computed(() => 
     currentUser.value?.location && currentUser.value?.activity
-  );
-
-  // NEW: Computed for displayed suggestions (paginated)
-  const displayedSuggestions = computed(() => 
-    allGeneratedSuggestions.value.slice(0, displayedSuggestionsCount.value)
-  );
-
-  // NEW: Check if there are more suggestions to load
-  const hasMoreSuggestions = computed(() => 
-    allGeneratedSuggestions.value.length > displayedSuggestionsCount.value
   );
 
   // Generate a hash of user locations and activities to detect changes
@@ -92,10 +77,6 @@ export const useMeetyStore = defineStore('meety', () => {
       if (currentSession.value) {
         currentSession.value.meetupSuggestions = [];
       }
-      
-      // NEW: Clear pagination state
-      allGeneratedSuggestions.value = [];
-      displayedSuggestionsCount.value = 7;
 
       // Delete from database
       const { error: deleteError } = await supabase
@@ -265,12 +246,6 @@ export const useMeetyStore = defineStore('meety', () => {
         meetupSuggestions: suggestions
       };
 
-      // NEW: Update pagination state
-      allGeneratedSuggestions.value = suggestions;
-      if (suggestions.length > 0) {
-        displayedSuggestionsCount.value = Math.min(7, suggestions.length);
-      }
-
       // Update tracking variables
       if (suggestions.length > 0) {
         lastSuggestionHash.value = getUserConfigHash();
@@ -326,12 +301,6 @@ export const useMeetyStore = defineStore('meety', () => {
 
       if (currentSession.value) {
         currentSession.value.meetupSuggestions = suggestions;
-        
-        // NEW: Update pagination state
-        allGeneratedSuggestions.value = suggestions;
-        if (suggestions.length > 0) {
-          displayedSuggestionsCount.value = Math.min(7, suggestions.length);
-        }
         
         // Update hash if we have suggestions
         if (suggestions.length > 0) {
@@ -591,8 +560,8 @@ export const useMeetyStore = defineStore('meety', () => {
 
       console.log('🎯 Calculating optimal meetup locations...');
       
-      // Generate suggestions - UPDATED to get more suggestions for pagination
-      const calculatedSuggestions = await generateMeetupSuggestions(currentSession.value.users, 25); // Generate 25 suggestions
+      // Generate suggestions
+      const calculatedSuggestions = await generateMeetupSuggestions(currentSession.value.users);
       console.log('✨ Generated suggestions:', calculatedSuggestions.length, 'places');
       
       if (calculatedSuggestions.length === 0) {
@@ -646,31 +615,6 @@ export const useMeetyStore = defineStore('meety', () => {
     }
   };
 
-  // NEW: Load more suggestions action
-  const loadMoreSuggestions = async () => {
-    if (!hasMoreSuggestions.value || isLoadingMore.value) return;
-
-    isLoadingMore.value = true;
-    
-    try {
-      console.log('📄 Loading more suggestions...');
-      
-      // Increase displayed count by 7
-      const newCount = displayedSuggestionsCount.value + 7;
-      displayedSuggestionsCount.value = Math.min(newCount, allGeneratedSuggestions.value.length);
-      
-      console.log(`✅ Now showing ${displayedSuggestionsCount.value} of ${allGeneratedSuggestions.value.length} suggestions`);
-      
-      // Simulate a small delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-    } catch (err) {
-      console.error('❌ Error loading more suggestions:', err);
-    } finally {
-      isLoadingMore.value = false;
-    }
-  };
-
   const getShareableLink = () => {
     if (!currentSession.value) return '';
     const baseUrl = window.location.origin + window.location.pathname;
@@ -700,7 +644,6 @@ export const useMeetyStore = defineStore('meety', () => {
     currentUserId,
     isLoading,
     error,
-    isLoadingMore, // NEW
     
     // Computed
     connectedUsers,
@@ -708,8 +651,6 @@ export const useMeetyStore = defineStore('meety', () => {
     canGenerateMeetups,
     shouldShowShareLink,
     areSuggestionsOutdated,
-    displayedSuggestions, // NEW: Use this instead of currentSession.meetupSuggestions
-    hasMoreSuggestions, // NEW
     
     // Actions
     createSession,
@@ -717,7 +658,6 @@ export const useMeetyStore = defineStore('meety', () => {
     updateUserLocation,
     updateUserActivity,
     generateMeetupSuggestions: generateMeetupSuggestionsAction,
-    loadMoreSuggestions, // NEW
     getShareableLink,
     cleanup,
     

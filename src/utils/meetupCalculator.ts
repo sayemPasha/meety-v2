@@ -259,8 +259,8 @@ function getGooglePlacesType(activityType: string): string {
   return typeMapping[activityType] || 'restaurant';
 }
 
-// Generate meetup suggestions - UPDATED to handle single user and accept maxResults parameter
-export async function generateMeetupSuggestions(users: User[], maxResults: number = 7): Promise<MeetupSuggestion[]> {
+// Generate meetup suggestions - UPDATED to handle single user
+export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSuggestion[]> {
   const connectedUsers = users.filter(user => user.connected && user.location);
   
   if (connectedUsers.length < 1) {
@@ -290,9 +290,6 @@ export async function generateMeetupSuggestions(users: User[], maxResults: numbe
         document.createElement('div')
       );
       
-      // Calculate suggestions per activity type based on maxResults
-      const suggestionsPerActivity = Math.ceil(maxResults / Math.max(preferredActivities.length + 2, 4)); // +2 for restaurant and cafe fallbacks
-      
       // Search for places for each preferred activity type
       for (const activityType of preferredActivities.slice(0, 4)) {
         const placesForActivity = await searchGooglePlaces(
@@ -300,8 +297,7 @@ export async function generateMeetupSuggestions(users: User[], maxResults: numbe
           centerPoint, 
           getGooglePlacesType(activityType),
           activityType,
-          users,
-          suggestionsPerActivity
+          users
         );
         allSuggestions.push(...placesForActivity);
       }
@@ -313,8 +309,7 @@ export async function generateMeetupSuggestions(users: User[], maxResults: numbe
           centerPoint,
           'restaurant',
           'restaurant',
-          users,
-          suggestionsPerActivity * 2 // More restaurants
+          users
         );
         allSuggestions.push(...restaurantPlaces);
       }
@@ -326,18 +321,17 @@ export async function generateMeetupSuggestions(users: User[], maxResults: numbe
           centerPoint,
           'cafe',
           'coffee',
-          users,
-          suggestionsPerActivity
+          users
         );
         allSuggestions.push(...cafePlaces);
       }
     } catch (error) {
       console.error('Google Places API error, falling back to mock data:', error);
-      return generateMockSuggestions(users, centerPoint, preferredActivities, maxResults);
+      return generateMockSuggestions(users, centerPoint, preferredActivities);
     }
   } else {
     console.log('Google Places API not available, using mock data');
-    return generateMockSuggestions(users, centerPoint, preferredActivities, maxResults);
+    return generateMockSuggestions(users, centerPoint, preferredActivities);
   }
 
   // Remove duplicates based on place ID or name+location
@@ -365,7 +359,7 @@ export async function generateMeetupSuggestions(users: User[], maxResults: numbe
       
       return centerDistanceDiff;
     })
-    .slice(0, maxResults); // Return requested number of suggestions
+    .slice(0, 7); // Return top 7 suggestions
 
   console.log('✨ Final suggestions (sorted by distance to center):', sortedSuggestions.map(s => ({
     name: s.name,
@@ -403,8 +397,7 @@ function searchGooglePlaces(
   location: Location,
   placeType: string,
   activityType: string,
-  users: User[],
-  maxResults: number = 10
+  users: User[]
 ): Promise<MeetupSuggestion[]> {
   return new Promise((resolve) => {
     const request: google.maps.places.PlaceSearchRequest = {
@@ -421,7 +414,7 @@ function searchGooglePlaces(
         console.log(`✅ Found ${results.length} places for ${placeType}`);
         
         const suggestions = results
-          .slice(0, maxResults)
+          .slice(0, 10)
           .filter(place => place.rating && place.rating >= 3.0)
           .map(place => {
             const placeLocation = {
@@ -482,33 +475,31 @@ function searchGooglePlaces(
   });
 }
 
-// Fallback mock suggestions when Google Places API is not available - UPDATED for single user and maxResults
+// Fallback mock suggestions when Google Places API is not available - UPDATED for single user
 function generateMockSuggestions(
   users: User[], 
   centerPoint: Location, 
-  preferredActivities: string[],
-  maxResults: number = 7
+  preferredActivities: string[]
 ): MeetupSuggestion[] {
   console.log('🎭 Generating mock suggestions (Google Places API not available)');
   
   const suggestions: MeetupSuggestion[] = [];
-  const suggestionsPerActivity = Math.ceil(maxResults / Math.max(preferredActivities.length + 2, 4));
   
   // Create suggestions for each preferred activity type
   for (const activityType of preferredActivities.slice(0, 3)) {
-    const placesForActivity = generateMockPlaces(centerPoint, activityType, users, suggestionsPerActivity);
+    const placesForActivity = generateMockPlaces(centerPoint, activityType, users);
     suggestions.push(...placesForActivity);
   }
 
   // Always add restaurants
   if (!preferredActivities.includes('restaurant')) {
-    const restaurantPlaces = generateMockPlaces(centerPoint, 'restaurant', users, suggestionsPerActivity * 2);
+    const restaurantPlaces = generateMockPlaces(centerPoint, 'restaurant', users);
     suggestions.push(...restaurantPlaces);
   }
 
   // Add cafes
   if (!preferredActivities.includes('coffee')) {
-    const cafePlaces = generateMockPlaces(centerPoint, 'coffee', users, suggestionsPerActivity);
+    const cafePlaces = generateMockPlaces(centerPoint, 'coffee', users);
     suggestions.push(...cafePlaces);
   }
 
@@ -533,7 +524,7 @@ function generateMockSuggestions(
       
       return centerDistanceDiff;
     })
-    .slice(0, maxResults); // Return requested number of suggestions
+    .slice(0, 7); // Return top 7 suggestions
 }
 
 // Generate mock places around a location
