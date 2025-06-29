@@ -59,13 +59,13 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(168, 85, 168, 0.6);
+  background: rgba(236, 72, 153, 0.6);
   border-radius: 4px;
   transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(232, 121, 232, 0.8);
+  background: rgba(217, 70, 239, 0.8);
 }
 
 /* Smooth transitions for all interactive elements */
@@ -78,7 +78,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #a855a8;
+  outline: 2px solid #ec4899;
   outline-offset: 2px;
 }
 
@@ -142,8 +142,8 @@ textarea:focus-visible {
 
 /* Loading spinner */
 .spinner {
-  border: 4px solid rgba(168, 85, 168, 0.1);
-  border-left: 4px solid #a855a8;
+  border: 4px solid rgba(236, 72, 153, 0.1);
+  border-left: 4px solid #ec4899;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -194,18 +194,31 @@ textarea:focus-visible {
   }
 }
 
-/* Enhanced glass morphism effects for better contrast on new background */
+/* PRESERVE ORIGINAL PANEL BACKGROUNDS - Override gradient effects for specific panels */
+
+/* Control Panel Backgrounds - Keep original white/glass effect */
 .bg-white\/10 {
-  background-color: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(4px) !important;
 }
 
 .bg-white\/5 {
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(4px) !important;
 }
 
-/* Ensure text remains readable on the new gradient */
+/* Share Panel - Keep original stellar gradient */
+.bg-gradient-to-r.from-stellar-50.to-nebula-50 {
+  background: linear-gradient(to right, #fffbeb, #f0fdfa) !important;
+}
+
+.border-stellar-200 {
+  border-color: #fde68a !important;
+}
+
+/* Ensure text remains readable */
 .text-gray-300 {
   color: rgba(255, 255, 255, 0.8);
 }
@@ -216,4 +229,9 @@ textarea:focus-visible {
 
 .text-gray-600 {
   color: rgba(255, 255, 255, 0.7);
+}
+
+/* Node container - subtle purple instead of blue */
+.node-container {
+  background: radial-gradient(circle at center, rgba(236, 72, 153, 0.1) 0%, transparent 70%) !important;
 }
