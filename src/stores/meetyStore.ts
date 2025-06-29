@@ -249,6 +249,7 @@ export const useMeetyStore = defineStore('meety', () => {
         color: user.color
       }));
 
+      // FIXED: Correct location mapping for suggestions
       const suggestions: MeetupSuggestion[] = suggestionsData.map(suggestion => ({
         id: suggestion.id,
         name: suggestion.name,
@@ -316,14 +317,15 @@ export const useMeetyStore = defineStore('meety', () => {
         throw suggestionsError;
       }
 
+      // FIXED: Correct location mapping for suggestions
       const suggestions: MeetupSuggestion[] = data.map(suggestion => ({
         id: suggestion.id,
         name: suggestion.name,
         type: suggestion.type,
         location: {
-          lat: suggestion.location.lat,
-          lng: suggestion.location.lng,
-          address: suggestion.location.address
+          lat: suggestion.location_lat,
+          lng: suggestion.location_lng,
+          address: suggestion.location_address
         },
         rating: suggestion.rating,
         distance: suggestion.distance,

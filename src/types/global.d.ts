@@ -132,6 +132,7 @@ declare namespace google {
         price_level?: number;
         opening_hours?: {
           open_now?: boolean;
+          isOpen?: () => boolean; // NEW: Added the newer isOpen method
         };
         photos?: PlacePhoto[];
         types?: string[];

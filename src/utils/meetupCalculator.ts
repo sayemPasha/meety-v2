@@ -397,7 +397,36 @@ function removeDuplicateSuggestions(suggestions: MeetupSuggestion[]): MeetupSugg
   return unique;
 }
 
-// Search Google Places API - ENHANCED with better photo retrieval
+// UPDATED: Enhanced place details retrieval to handle deprecated open_now
+async function getPlaceDetails(
+  placesService: google.maps.places.PlacesService,
+  placeId: string
+): Promise<{ isOpen?: boolean } | null> {
+  return new Promise((resolve) => {
+    const request: google.maps.places.PlaceDetailsRequest = {
+      placeId: placeId,
+      fields: ['opening_hours']
+    };
+
+    placesService.getDetails(request, (result, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && result) {
+        try {
+          // Use the newer isOpen() method if available
+          const isOpen = result.opening_hours?.isOpen ? result.opening_hours.isOpen() : undefined;
+          resolve({ isOpen });
+        } catch (error) {
+          console.warn('⚠️ Could not determine if place is open:', error);
+          resolve({ isOpen: undefined });
+        }
+      } else {
+        console.warn('⚠️ Could not get place details for:', placeId, status);
+        resolve(null);
+      }
+    });
+  });
+}
+
+// Search Google Places API - ENHANCED with better photo retrieval and fixed open_now deprecation
 function searchGooglePlaces(
   placesService: google.maps.places.PlacesService,
   location: Location,
@@ -411,67 +440,80 @@ function searchGooglePlaces(
       location: new google.maps.LatLng(location.lat, location.lng),
       radius: 3000, // 3km radius for suggestions
       type: placeType as any,
-      openNow: false
+      openNow: false // Remove this to avoid the deprecated warning
     };
 
     console.log(`🔍 Searching Google Places for ${placeType} near ${location.lat}, ${location.lng}`);
 
-    placesService.nearbySearch(request, (results, status) => {
+    placesService.nearbySearch(request, async (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
         console.log(`✅ Found ${results.length} places for ${placeType}`);
         
-        const suggestions = results
-          .slice(0, maxResults)
-          .filter(place => place.rating && place.rating >= 3.0)
-          .map(place => {
-            const placeLocation = {
-              lat: place.geometry?.location?.lat() || location.lat,
-              lng: place.geometry?.location?.lng() || location.lng,
-              address: place.vicinity || place.formatted_address || 'Unknown address'
-            };
+        const suggestions: MeetupSuggestion[] = [];
+        
+        // Process places sequentially to avoid rate limiting
+        for (const place of results.slice(0, maxResults)) {
+          if (!place.rating || place.rating < 3.0) continue;
+          
+          const placeLocation = {
+            lat: place.geometry?.location?.lat() || location.lat,
+            lng: place.geometry?.location?.lng() || location.lng,
+            address: place.vicinity || place.formatted_address || 'Unknown address'
+          };
 
-            const averageDistance = calculateAverageDistance(placeLocation, users);
-            const distanceToCenter = calculateDistance(
-              location.lat,
-              location.lng,
-              placeLocation.lat,
-              placeLocation.lng
-            );
-            
-            // Get photo URL if available - ENHANCED
-            let photoUrl = '';
-            if (place.photos && place.photos.length > 0) {
-              try {
-                photoUrl = place.photos[0].getUrl({ 
-                  maxWidth: 400, 
-                  maxHeight: 300 
-                });
-                console.log(`📸 Retrieved photo for ${place.name}: ${photoUrl.substring(0, 50)}...`);
-              } catch (error) {
-                console.warn(`⚠️ Failed to get photo for ${place.name}:`, error);
-              }
-            } else {
-              console.log(`📷 No photos available for ${place.name}`);
+          const averageDistance = calculateAverageDistance(placeLocation, users);
+          const distanceToCenter = calculateDistance(
+            location.lat,
+            location.lng,
+            placeLocation.lat,
+            placeLocation.lng
+          );
+          
+          // Get photo URL if available - ENHANCED
+          let photoUrl = '';
+          if (place.photos && place.photos.length > 0) {
+            try {
+              photoUrl = place.photos[0].getUrl({ 
+                maxWidth: 400, 
+                maxHeight: 300 
+              });
+              console.log(`📸 Retrieved photo for ${place.name}: ${photoUrl.substring(0, 50)}...`);
+            } catch (error) {
+              console.warn(`⚠️ Failed to get photo for ${place.name}:`, error);
             }
+          } else {
+            console.log(`📷 No photos available for ${place.name}`);
+          }
 
-            const suggestion = {
-              id: place.place_id || `${place.name?.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-              name: place.name || 'Unknown Place',
-              type: activityType,
-              location: placeLocation,
-              rating: place.rating || 4.0,
-              distance: distanceToCenter,
-              averageDistance,
-              placeId: place.place_id,
-              photoUrl: photoUrl || undefined,
-              priceLevel: place.price_level,
-              openNow: place.opening_hours?.open_now
-            };
+          // FIXED: Get opening status using the newer method if place_id is available
+          let isOpen: boolean | undefined = undefined;
+          if (place.place_id) {
+            try {
+              const placeDetails = await getPlaceDetails(placesService, place.place_id);
+              isOpen = placeDetails?.isOpen;
+            } catch (error) {
+              console.warn(`⚠️ Could not get opening status for ${place.name}:`, error);
+            }
+          }
 
-            console.log(`📍 Created suggestion: ${suggestion.name} (${suggestion.rating}⭐, ${suggestion.distance.toFixed(1)}km, photo: ${!!suggestion.photoUrl})`);
-            
-            return suggestion;
-          });
+          const suggestion = {
+            id: place.place_id || `${place.name?.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+            name: place.name || 'Unknown Place',
+            type: activityType,
+            location: placeLocation,
+            rating: place.rating || 4.0,
+            distance: distanceToCenter,
+            averageDistance,
+            placeId: place.place_id,
+            photoUrl: photoUrl || undefined,
+            priceLevel: place.price_level,
+            openNow: isOpen // Use the newer isOpen value
+          };
+
+          console.log(`📍 Created suggestion: ${suggestion.name} (${suggestion.rating}⭐, ${suggestion.distance.toFixed(1)}km, photo: ${!!suggestion.photoUrl}, open: ${suggestion.openNow})`);
+          
+          suggestions.push(suggestion);
+        }
         
         resolve(suggestions);
       } else {
