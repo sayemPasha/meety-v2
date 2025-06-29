@@ -359,7 +359,7 @@ export async function generateMeetupSuggestions(users: User[]): Promise<MeetupSu
       
       return centerDistanceDiff;
     })
-    .slice(0, 7); // Return top 7 suggestions
+    .slice(0, 10); // Return top 10 suggestions
 
   console.log('✨ Final suggestions (sorted by distance to center):', sortedSuggestions.map(s => ({
     name: s.name,
@@ -414,7 +414,7 @@ function searchGooglePlaces(
         console.log(`✅ Found ${results.length} places for ${placeType}`);
         
         const suggestions = results
-          .slice(0, 10)
+          .slice(0, 15) // Get more results to ensure we have enough after filtering
           .filter(place => place.rating && place.rating >= 3.0)
           .map(place => {
             const placeLocation = {
@@ -524,11 +524,11 @@ function generateMockSuggestions(
       
       return centerDistanceDiff;
     })
-    .slice(0, 7); // Return top 7 suggestions
+    .slice(0, 10); // Return top 10 suggestions
 }
 
 // Generate mock places around a location
-function generateMockPlaces(centerLocation: Location, activityType: string, users: User[], count: number = 3): MeetupSuggestion[] {
+function generateMockPlaces(centerLocation: Location, activityType: string, users: User[], count: number = 4): MeetupSuggestion[] {
   const placeTemplates = {
     restaurant: [
       'Central Bistro', 'The Meeting Place', 'Midpoint Café', 'Fusion Kitchen', 'Corner Table',

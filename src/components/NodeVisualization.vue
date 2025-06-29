@@ -202,13 +202,17 @@
             }}
           </div>
           <div class="flex items-center space-x-3">
-            <!-- Check Locations Button -->
+            <!-- Check Locations Button with Location Marker Icon -->
             <button
               v-if="meetupSuggestions.length > 0"
-              class="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200"
+              class="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
               @click="showLocationMap = true"
             >
-              🗺️ Check Locations
+              <!-- Location Marker SVG Icon -->
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              <span>Check Locations</span>
             </button>
             <button
               class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
