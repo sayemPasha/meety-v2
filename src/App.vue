@@ -7,16 +7,15 @@
           <div class="relative">
             <!-- Meety Logo with Glow Effect -->
             <div class="absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full blur-lg opacity-60 animate-pulse-glow"></div>
-            <div class="relative w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
+            <div class="relative w-16 h-16 flex items-center justify-center">
               <img 
                 src="/meety-transparent.png" 
                 alt="Meety Logo" 
-                class="w-10 h-10 object-contain"
+                class="w-full h-full object-contain drop-shadow-lg"
               />
             </div>
           </div>
           <div>
-            <h1 class="text-2xl font-bold text-white">Meety</h1>
             <p class="text-sm text-gray-300">Find the perfect meetup spot</p>
           </div>
         </div>
