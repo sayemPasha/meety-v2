@@ -3,11 +3,11 @@
     <!-- Header -->
     <header class="relative z-30 p-6">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-4">
           <div class="relative">
             <!-- Meety Logo with Smaller Glow Effect -->
             <div class="absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full blur-md opacity-50 animate-pulse-glow"></div>
-            <div class="relative w-20 h-20 flex items-center justify-center">
+            <div class="relative w-28 h-28 flex items-center justify-center">
               <img 
                 src="/meety-transparent.png" 
                 alt="Meety Logo" 
@@ -16,7 +16,7 @@
             </div>
           </div>
           <div>
-            <p class="text-sm text-gray-300">Find the perfect meetup spot</p>
+            <p class="text-lg text-gray-200 font-medium">Find the perfect meetup spot</p>
           </div>
         </div>
         
