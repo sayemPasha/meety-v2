@@ -1,5 +1,78 @@
 <template>
   <div class="relative w-full h-full overflow-hidden">
+    <!-- SVG for Connection Lines -->
+    <svg 
+      class="absolute inset-0 w-full h-full pointer-events-none z-10"
+      :viewBox="`0 0 ${containerWidth} ${containerHeight}`"
+    >
+      <!-- Connection lines from connected users to center -->
+      <g v-for="(user, index) in connectedUsers" :key="`line-${user.id}`">
+        <line
+          :x1="getUserPosition(users.findIndex(u => u.id === user.id)).x"
+          :y1="getUserPosition(users.findIndex(u => u.id === user.id)).y"
+          :x2="centerPosition.x"
+          :y2="centerPosition.y"
+          stroke="url(#connectionGradient)"
+          stroke-width="3"
+          stroke-dasharray="8,4"
+          class="animate-connection-flow"
+          :style="{ 
+            animationDelay: `${index * 0.3}s`,
+            opacity: user.connected ? 1 : 0
+          }"
+        />
+        
+        <!-- Animated data packets -->
+        <circle
+          r="4"
+          fill="#3b82f6"
+          class="animate-data-flow"
+          :style="{ 
+            animationDelay: `${index * 0.5}s`,
+            opacity: user.connected ? 1 : 0
+          }"
+        >
+          <animateMotion
+            :dur="`${2 + Math.random()}s`"
+            repeatCount="indefinite"
+            :begin="`${index * 0.5}s`"
+          >
+            <mpath>
+              <path 
+                :d="`M ${getUserPosition(users.findIndex(u => u.id === user.id)).x} ${getUserPosition(users.findIndex(u => u.id === user.id)).y} L ${centerPosition.x} ${centerPosition.y}`"
+              />
+            </mpath>
+          </animateMotion>
+        </circle>
+      </g>
+      
+      <!-- Gradient definitions -->
+      <defs>
+        <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.8" />
+          <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:0.6" />
+          <stop offset="100%" style="stop-color:#14b8a6;stop-opacity:0.4" />
+        </linearGradient>
+        
+        <radialGradient id="pulseGradient" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.8" />
+          <stop offset="70%" style="stop-color:#8b5cf6;stop-opacity:0.4" />
+          <stop offset="100%" style="stop-color:#14b8a6;stop-opacity:0.1" />
+        </radialGradient>
+      </defs>
+      
+      <!-- Central pulse effect when users are connected -->
+      <circle
+        v-if="connectedUsers.length > 0"
+        :cx="centerPosition.x"
+        :cy="centerPosition.y"
+        r="60"
+        fill="url(#pulseGradient)"
+        class="animate-center-pulse"
+        opacity="0.3"
+      />
+    </svg>
+
     <!-- Center Node -->
     <div
       ref="centerNode"
@@ -7,13 +80,31 @@
       :style="{ left: centerPosition.x + 'px', top: centerPosition.y + 'px' }"
     >
       <div
-        class="w-24 h-24 rounded-full bg-gradient-to-br from-cosmic-500 to-space-600 border-4 border-white shadow-2xl cursor-pointer transition-all duration-300 hover:scale-110 flex items-center justify-center"
-        :class="{ 'animate-pulse-glow': canGenerateMeetups }"
+        class="w-24 h-24 rounded-full bg-gradient-to-br from-cosmic-500 to-space-600 border-4 border-white shadow-2xl cursor-pointer transition-all duration-300 hover:scale-110 flex items-center justify-center relative"
+        :class="{ 
+          'animate-pulse-glow': canGenerateMeetups,
+          'animate-connected-glow': connectedUsers.length > 0 && !canGenerateMeetups
+        }"
         @click="handleCenterNodeClick"
       >
-        <div class="text-white text-center">
+        <!-- Connection indicator ring -->
+        <div 
+          v-if="connectedUsers.length > 0"
+          class="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping"
+          style="animation-duration: 2s;"
+        ></div>
+        
+        <div class="text-white text-center relative z-10">
           <div class="text-2xl mb-1">🌟</div>
           <div class="text-xs font-semibold">Meety</div>
+        </div>
+        
+        <!-- Connection count indicator -->
+        <div 
+          v-if="connectedUsers.length > 0"
+          class="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white shadow-lg"
+        >
+          {{ connectedUsers.length }}
         </div>
       </div>
     </div>
@@ -39,6 +130,12 @@
         }"
         @click="handleUserNodeClick(user)"
       >
+        <!-- Connection status indicator -->
+        <div 
+          v-if="user.connected"
+          class="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"
+        ></div>
+        
         <!-- Location pin icon -->
         <div v-if="user.location" class="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
           <span class="text-sm">📍</span>
@@ -388,5 +485,71 @@ const emit = defineEmits<{
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Connection line animations */
+@keyframes connection-flow {
+  0% {
+    stroke-dashoffset: 100%;
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    stroke-dashoffset: 0%;
+    opacity: 0.6;
+  }
+}
+
+@keyframes data-flow {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@keyframes center-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.1;
+  }
+}
+
+@keyframes connected-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.8), 0 0 60px rgba(139, 92, 246, 0.5);
+  }
+}
+
+.animate-connection-flow {
+  animation: connection-flow 3s ease-in-out infinite;
+}
+
+.animate-data-flow {
+  animation: data-flow 2s ease-in-out infinite;
+}
+
+.animate-center-pulse {
+  animation: center-pulse 2s ease-in-out infinite;
+}
+
+.animate-connected-glow {
+  animation: connected-glow 2s ease-in-out infinite alternate;
 }
 </style>
