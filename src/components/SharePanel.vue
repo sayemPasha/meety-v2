@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-gradient-to-r from-stellar-50 to-nebula-50 border border-stellar-200 rounded-2xl p-6 shadow-lg">
+  <div class="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-2xl p-6 shadow-lg">
     <div class="flex items-center space-x-3 mb-4">
-      <div class="w-12 h-12 bg-gradient-to-br from-stellar-400 to-stellar-600 rounded-full flex items-center justify-center">
+      <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full flex items-center justify-center">
         <span class="text-white text-xl">🔗</span>
       </div>
       <div>
@@ -24,7 +24,7 @@
             class="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-600 focus:outline-none"
           />
           <button
-            class="px-6 py-3 bg-gradient-to-r from-cosmic-500 to-space-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+            class="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
             @click="copyLink"
           >
             {{ copied ? '✓ Copied!' : 'Copy' }}
