@@ -85,7 +85,12 @@
           </div>
         </div>
         
-        <div class="p-6 space-y-6 max-h-96 overflow-y-auto">
+        <!-- Scrollable suggestions container with infinite scroll -->
+        <div 
+          ref="suggestionsContainer"
+          class="p-6 space-y-6 max-h-96 overflow-y-auto"
+          @scroll="handleScroll"
+        >
           <div
             v-for="(suggestion, index) in displayedSuggestions"
             :key="suggestion.id"
@@ -173,15 +178,10 @@
             </div>
           </div>
 
-          <!-- Load More Button -->
-          <div v-if="hasMoreSuggestions" class="text-center py-4">
-            <button
-              class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-8 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              @click="loadMoreSuggestions"
-              :disabled="store.isLoadingMore"
-            >
-              {{ store.isLoadingMore ? '🔄 Loading...' : `📄 Load More (${allGeneratedSuggestions.length - displayedSuggestions.length} remaining)` }}
-            </button>
+          <!-- Loading indicator for infinite scroll -->
+          <div v-if="store.isLoadingMore" class="text-center py-6">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <div class="text-sm text-gray-600 mt-2">Loading more suggestions...</div>
           </div>
 
           <!-- No suggestions message -->
@@ -208,8 +208,8 @@
         <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
           <div class="text-sm text-gray-600">
             {{ connectedUsers.length === 1 
-              ? `Showing ${displayedSuggestions.length} of ${allGeneratedSuggestions.length} suggestion${allGeneratedSuggestions.length !== 1 ? 's' : ''} near you`
-              : `Showing ${displayedSuggestions.length} of ${allGeneratedSuggestions.length} suggestion${allGeneratedSuggestions.length !== 1 ? 's' : ''} for ${connectedUsers.length} users`
+              ? `Showing ${displayedSuggestions.length}${hasMoreSuggestions ? '+' : ''} suggestion${displayedSuggestions.length !== 1 ? 's' : ''} near you`
+              : `Showing ${displayedSuggestions.length}${hasMoreSuggestions ? '+' : ''} suggestion${displayedSuggestions.length !== 1 ? 's' : ''} for ${connectedUsers.length} users`
             }}
           </div>
           <div class="flex items-center space-x-3">
@@ -267,6 +267,7 @@ const centerNode = ref<HTMLElement>();
 const userNodes = ref<HTMLElement[]>([]);
 const showMeetupModal = ref(false);
 const showLocationMap = ref(false);
+const suggestionsContainer = ref<HTMLElement>();
 
 // Computed properties
 const users = computed(() => store.currentSession?.users || []);
@@ -277,7 +278,6 @@ const connectedUsers = computed(() => store.connectedUsers);
 // NEW: Use displayedSuggestions from store instead of all suggestions
 const displayedSuggestions = computed(() => store.displayedSuggestions);
 const hasMoreSuggestions = computed(() => store.hasMoreSuggestions);
-const allGeneratedSuggestions = computed(() => store.currentSession?.meetupSuggestions || []);
 
 const centerPosition = computed(() => ({
   x: containerWidth.value / 2,
@@ -332,10 +332,20 @@ const refreshSuggestions = async () => {
   await store.generateMeetupSuggestions();
 };
 
-// NEW: Load more suggestions method
-const loadMoreSuggestions = async () => {
-  console.log('📄 Loading more suggestions...');
-  await store.loadMoreSuggestions();
+// NEW: Handle infinite scroll
+const handleScroll = async (event: Event) => {
+  const container = event.target as HTMLElement;
+  const scrollTop = container.scrollTop;
+  const scrollHeight = container.scrollHeight;
+  const clientHeight = container.clientHeight;
+  
+  // Check if user has scrolled near the bottom (within 100px)
+  const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
+  
+  if (isNearBottom && hasMoreSuggestions.value && !store.isLoadingMore) {
+    console.log('📄 User scrolled near bottom, loading more suggestions...');
+    await store.loadMoreSuggestions();
+  }
 };
 
 const closeMeetupModal = () => {
