@@ -17,12 +17,10 @@ export const useMeetyStore = defineStore('meety', () => {
   const lastUserCount = ref<number>(0); // Track user count changes
   const isGeneratingSuggestions = ref(false); // Prevent concurrent generation
   
-  // NEW: Infinite scroll state for suggestions
+  // NEW: Pagination state for suggestions
   const allGeneratedSuggestions = ref<MeetupSuggestion[]>([]); // Store all generated suggestions
   const displayedSuggestionsCount = ref(7); // How many to show initially
-  const isLoadingMore = ref(false); // Loading state for infinite scroll
-  const hasGeneratedAllSuggestions = ref(false); // Track if we've generated all possible suggestions
-  const currentBatch = ref(1); // Track which batch we're on for generating more
+  const isLoadingMore = ref(false); // Loading state for load more
 
   // Computed properties
   const connectedUsers = computed(() => 
@@ -48,16 +46,10 @@ export const useMeetyStore = defineStore('meety', () => {
     allGeneratedSuggestions.value.slice(0, displayedSuggestionsCount.value)
   );
 
-  // NEW: Check if there are more suggestions to load or generate
-  const hasMoreSuggestions = computed(() => {
-    // First check if we have more already generated suggestions to display
-    if (allGeneratedSuggestions.value.length > displayedSuggestionsCount.value) {
-      return true;
-    }
-    
-    // Then check if we can generate more suggestions
-    return !hasGeneratedAllSuggestions.value && canGenerateMeetups.value;
-  });
+  // NEW: Check if there are more suggestions to load
+  const hasMoreSuggestions = computed(() => 
+    allGeneratedSuggestions.value.length > displayedSuggestionsCount.value
+  );
 
   // Generate a hash of user locations and activities to detect changes
   const getUserConfigHash = () => {
@@ -101,11 +93,9 @@ export const useMeetyStore = defineStore('meety', () => {
         currentSession.value.meetupSuggestions = [];
       }
       
-      // NEW: Clear infinite scroll state
+      // NEW: Clear pagination state
       allGeneratedSuggestions.value = [];
       displayedSuggestionsCount.value = 7;
-      hasGeneratedAllSuggestions.value = false;
-      currentBatch.value = 1;
 
       // Delete from database
       const { error: deleteError } = await supabase
@@ -275,7 +265,7 @@ export const useMeetyStore = defineStore('meety', () => {
         meetupSuggestions: suggestions
       };
 
-      // NEW: Update infinite scroll state
+      // NEW: Update pagination state
       allGeneratedSuggestions.value = suggestions;
       if (suggestions.length > 0) {
         displayedSuggestionsCount.value = Math.min(7, suggestions.length);
@@ -321,9 +311,9 @@ export const useMeetyStore = defineStore('meety', () => {
         name: suggestion.name,
         type: suggestion.type,
         location: {
-          lat: suggestion.location.lat,
-          lng: suggestion.location.lng,
-          address: suggestion.location.address
+          lat: suggestion.location_lat,
+          lng: suggestion.location_lng,
+          address: suggestion.location_address
         },
         rating: suggestion.rating,
         distance: suggestion.distance,
@@ -337,7 +327,7 @@ export const useMeetyStore = defineStore('meety', () => {
       if (currentSession.value) {
         currentSession.value.meetupSuggestions = suggestions;
         
-        // NEW: Update infinite scroll state
+        // NEW: Update pagination state
         allGeneratedSuggestions.value = suggestions;
         if (suggestions.length > 0) {
           displayedSuggestionsCount.value = Math.min(7, suggestions.length);
@@ -601,8 +591,8 @@ export const useMeetyStore = defineStore('meety', () => {
 
       console.log('🎯 Calculating optimal meetup locations...');
       
-      // Generate initial batch of suggestions
-      const calculatedSuggestions = await generateMeetupSuggestions(currentSession.value.users, 25); // Generate 25 suggestions initially
+      // Generate suggestions - UPDATED to get more suggestions for pagination
+      const calculatedSuggestions = await generateMeetupSuggestions(currentSession.value.users, 25); // Generate 25 suggestions
       console.log('✨ Generated suggestions:', calculatedSuggestions.length, 'places');
       
       if (calculatedSuggestions.length === 0) {
@@ -643,8 +633,6 @@ export const useMeetyStore = defineStore('meety', () => {
       // Update tracking variables
       lastSuggestionHash.value = getUserConfigHash();
       lastUserCount.value = currentSession.value.users.length;
-      currentBatch.value = 1; // Reset batch counter
-      hasGeneratedAllSuggestions.value = calculatedSuggestions.length < 25; // If we got less than requested, we've hit the limit
 
       // Reload suggestions - this will trigger real-time updates for other users
       await loadMeetupSuggestions(currentSession.value.id);
@@ -658,102 +646,23 @@ export const useMeetyStore = defineStore('meety', () => {
     }
   };
 
-  // NEW: Infinite scroll method to load more suggestions
+  // NEW: Load more suggestions action
   const loadMoreSuggestions = async () => {
-    if (!hasMoreSuggestions.value || isLoadingMore.value || !currentSession.value) return;
+    if (!hasMoreSuggestions.value || isLoadingMore.value) return;
 
     isLoadingMore.value = true;
     
     try {
       console.log('📄 Loading more suggestions...');
       
-      // First, check if we have more already generated suggestions to display
-      if (allGeneratedSuggestions.value.length > displayedSuggestionsCount.value) {
-        // Just increase the displayed count
-        const newCount = Math.min(
-          displayedSuggestionsCount.value + 7,
-          allGeneratedSuggestions.value.length
-        );
-        displayedSuggestionsCount.value = newCount;
-        
-        console.log(`✅ Now showing ${displayedSuggestionsCount.value} of ${allGeneratedSuggestions.value.length} suggestions`);
-        
-        // Small delay for better UX
-        await new Promise(resolve => setTimeout(resolve, 300));
-        return;
-      }
+      // Increase displayed count by 7
+      const newCount = displayedSuggestionsCount.value + 7;
+      displayedSuggestionsCount.value = Math.min(newCount, allGeneratedSuggestions.value.length);
       
-      // If we've displayed all generated suggestions but haven't hit the limit, generate more
-      if (!hasGeneratedAllSuggestions.value && canGenerateMeetups.value) {
-        console.log('🎯 Generating more suggestions (batch', currentBatch.value + 1, ')...');
-        
-        // Generate next batch of suggestions
-        const moreSuggestions = await generateMeetupSuggestions(
-          currentSession.value.users, 
-          15 // Generate 15 more suggestions per batch
-        );
-        
-        if (moreSuggestions.length > 0) {
-          // Filter out duplicates based on place ID or name+location
-          const existingIds = new Set(allGeneratedSuggestions.value.map(s => 
-            s.placeId || `${s.name}-${s.location.lat}-${s.location.lng}`
-          ));
-          
-          const newSuggestions = moreSuggestions.filter(s => {
-            const id = s.placeId || `${s.name}-${s.location.lat}-${s.location.lng}`;
-            return !existingIds.has(id);
-          });
-          
-          if (newSuggestions.length > 0) {
-            // Prepare data for database insertion
-            const suggestionsToInsert = newSuggestions.map(suggestion => ({
-              session_id: currentSession.value!.id,
-              name: suggestion.name,
-              type: suggestion.type,
-              location_lat: suggestion.location.lat,
-              location_lng: suggestion.location.lng,
-              location_address: suggestion.location.address,
-              rating: suggestion.rating,
-              distance: suggestion.distance,
-              average_distance: suggestion.averageDistance,
-              photo_url: suggestion.photoUrl || null,
-              place_id: suggestion.placeId || null,
-              price_level: suggestion.priceLevel || null,
-              open_now: suggestion.openNow || null
-            }));
-
-            console.log('💾 Saving', suggestionsToInsert.length, 'new suggestions to database...');
-            const { error: insertError } = await supabase
-              .from('meetup_suggestions')
-              .insert(suggestionsToInsert);
-
-            if (insertError) {
-              console.error('❌ Error inserting new suggestions:', insertError);
-            } else {
-              // Update local state
-              allGeneratedSuggestions.value.push(...newSuggestions);
-              displayedSuggestionsCount.value = Math.min(
-                displayedSuggestionsCount.value + 7,
-                allGeneratedSuggestions.value.length
-              );
-              
-              currentBatch.value++;
-              console.log(`✅ Added ${newSuggestions.length} new suggestions (batch ${currentBatch.value})`);
-            }
-          } else {
-            console.log('⚠️ No new unique suggestions found');
-            hasGeneratedAllSuggestions.value = true;
-          }
-        } else {
-          console.log('⚠️ No more suggestions available');
-          hasGeneratedAllSuggestions.value = true;
-        }
-        
-        // Check if we got fewer suggestions than requested (hit the limit)
-        if (moreSuggestions.length < 15) {
-          hasGeneratedAllSuggestions.value = true;
-        }
-      }
+      console.log(`✅ Now showing ${displayedSuggestionsCount.value} of ${allGeneratedSuggestions.value.length} suggestions`);
+      
+      // Simulate a small delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 500));
       
     } catch (err) {
       console.error('❌ Error loading more suggestions:', err);
