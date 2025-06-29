@@ -423,6 +423,34 @@ export const useMeetyStore = defineStore('meety', () => {
     }
   };
 
+  const updateUserName = async (name: string) => {
+    if (!currentUserDbId.value || !currentSession.value) return;
+
+    try {
+      console.log('👤 Updating user name:', name);
+      
+      const { error: updateError } = await supabase
+        .from('session_users')
+        .update({
+          name: name,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentUserDbId.value);
+
+      if (updateError) throw updateError;
+
+      // Update local state immediately for better UX
+      if (currentUser.value) {
+        currentUser.value.name = name;
+      }
+      
+      console.log('✅ Name updated successfully');
+    } catch (err) {
+      console.error('❌ Error updating user name:', err);
+      error.value = 'Failed to update name';
+    }
+  };
+
   const updateUserLocation = async (location: { lat: number; lng: number; address: string }) => {
     if (!currentUserDbId.value || !currentSession.value) return;
 
@@ -655,6 +683,7 @@ export const useMeetyStore = defineStore('meety', () => {
     // Actions
     createSession,
     joinSession,
+    updateUserName,
     updateUserLocation,
     updateUserActivity,
     generateMeetupSuggestions: generateMeetupSuggestionsAction,

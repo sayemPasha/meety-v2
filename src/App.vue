@@ -82,7 +82,10 @@
                 class="w-full mt-4 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
                 @click="showLocationSelector = true"
               >
-                Set Location & Activity
+                {{ currentUser?.name && currentUser.name !== 'Guest User' && !currentUser.name.startsWith('User ') 
+                  ? 'Update Profile' 
+                  : 'Set Up Profile' 
+                }}
               </button>
             </div>
 
@@ -95,7 +98,7 @@
               <div class="space-y-3 text-sm text-gray-300">
                 <div class="flex items-start space-x-3">
                   <span class="text-stellar-400 font-bold">1.</span>
-                  <span>Set your location and preferred activity</span>
+                  <span>Enter your name and set your location & activity</span>
                 </div>
                 <div class="flex items-start space-x-3">
                   <span class="text-stellar-400 font-bold">2.</span>

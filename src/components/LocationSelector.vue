@@ -2,8 +2,8 @@
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl max-w-4xl w-full my-8 shadow-2xl">
       <div class="p-6 border-b border-gray-200">
-        <h2 class="text-2xl font-bold text-gray-800 mb-2">📍 Select Your Location</h2>
-        <p class="text-gray-600">Search for a location or click directly on the map</p>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">👤 Set Up Your Profile</h2>
+        <p class="text-gray-600">Enter your name, select your location, and choose your preferred activity</p>
       </div>
       
       <div class="flex flex-col lg:flex-row h-[70vh] min-h-[500px]">
@@ -57,8 +57,27 @@
           </div>
         </div>
 
-        <!-- Activity Selection Panel -->
+        <!-- Profile Setup Panel -->
         <div class="lg:w-80 p-6 border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50">
+          <!-- User Name Section -->
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">Your Name</h3>
+            <div class="relative">
+              <input
+                v-model="userName"
+                type="text"
+                placeholder="Enter your name..."
+                maxlength="30"
+                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200"
+              />
+              <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
+                {{ userName.length }}/30
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">This name will be visible to other participants</p>
+          </div>
+
+          <!-- Activity Selection -->
           <div class="mb-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-3">Preferred Activity</h3>
             <div class="grid grid-cols-2 gap-3">
@@ -91,11 +110,26 @@
 
           <!-- Instructions -->
           <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <h4 class="font-medium text-blue-800 mb-2">How to select location:</h4>
+            <h4 class="font-medium text-blue-800 mb-2">Setup Steps:</h4>
             <ul class="text-sm text-blue-700 space-y-1">
-              <li>• Search in the box above</li>
-              <li>• Click anywhere on the map</li>
-              <li>• Use the location button for GPS</li>
+              <li class="flex items-center space-x-2">
+                <span :class="userName.trim() ? 'text-green-600' : 'text-blue-600'">
+                  {{ userName.trim() ? '✓' : '1.' }}
+                </span>
+                <span>Enter your name</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span :class="selectedLocation ? 'text-green-600' : 'text-blue-600'">
+                  {{ selectedLocation ? '✓' : '2.' }}
+                </span>
+                <span>Select your location</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span :class="selectedActivity ? 'text-green-600' : 'text-blue-600'">
+                  {{ selectedActivity ? '✓' : '3.' }}
+                </span>
+                <span>Choose preferred activity</span>
+              </li>
             </ul>
           </div>
         </div>
@@ -111,10 +145,10 @@
         </button>
         <button
           class="flex-1 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!selectedLocation || !selectedActivity"
+          :disabled="!isFormValid"
           @click="confirmSelection"
         >
-          Confirm Selection
+          {{ isFormValid ? 'Join Meetup' : 'Complete Setup' }}
         </button>
       </div>
     </div>
@@ -122,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useMeetyStore } from '@/stores/meetyStore';
 import { ACTIVITY_TYPES } from '@/types';
 
@@ -133,12 +167,34 @@ const mapContainer = ref<HTMLElement>();
 const searchInput = ref<HTMLInputElement>();
 const selectedLocation = ref<{ lat: number; lng: number; address: string } | null>(null);
 const selectedActivity = ref<string>('');
+const userName = ref<string>('');
+
+// Computed properties
+const isFormValid = computed(() => 
+  userName.value.trim().length >= 2 && 
+  selectedLocation.value && 
+  selectedActivity.value
+);
 
 // Google Maps instances
 let map: google.maps.Map | null = null;
 let marker: google.maps.Marker | null = null;
 let searchBox: google.maps.places.SearchBox | null = null;
 let geocoder: google.maps.Geocoder | null = null;
+
+// Initialize with current user data if available
+onMounted(() => {
+  const currentUser = store.currentUser;
+  if (currentUser) {
+    userName.value = currentUser.name || '';
+    selectedActivity.value = currentUser.activity || '';
+    if (currentUser.location) {
+      selectedLocation.value = currentUser.location;
+    }
+  }
+  
+  waitForGoogleMaps();
+});
 
 // Initialize Google Maps
 const initializeMap = () => {
@@ -339,9 +395,14 @@ const getCurrentLocation = () => {
 
 // Confirm selection
 const confirmSelection = () => {
-  if (selectedLocation.value && selectedActivity.value) {
-    store.updateUserLocation(selectedLocation.value);
+  if (isFormValid.value) {
+    // Update user name first
+    store.updateUserName(userName.value.trim());
+    
+    // Then update location and activity
+    store.updateUserLocation(selectedLocation.value!);
     store.updateUserActivity(selectedActivity.value);
+    
     emit('close');
   }
 };
@@ -356,10 +417,6 @@ const waitForGoogleMaps = () => {
 };
 
 // Lifecycle
-onMounted(() => {
-  waitForGoogleMaps();
-});
-
 onUnmounted(() => {
   // Clean up marker
   if (marker) {
