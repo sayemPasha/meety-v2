@@ -211,14 +211,6 @@
               🗺️ Check Locations
             </button>
             <button
-              v-if="canGenerateMeetups"
-              class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200"
-              @click="refreshSuggestions"
-              :disabled="store.isLoading"
-            >
-              {{ store.isLoading ? '🔄 Refreshing...' : '🔄 Refresh' }}
-            </button>
-            <button
               class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
               @click="closeMeetupModal"
             >
@@ -309,11 +301,6 @@ const handleUserNodeClick = (user: any) => {
 
 const generateSuggestions = async () => {
   console.log('🎯 Generating fresh suggestions...');
-  await store.generateMeetupSuggestions();
-};
-
-const refreshSuggestions = async () => {
-  console.log('🔄 Manually refreshing suggestions...');
   await store.generateMeetupSuggestions();
 };
 
