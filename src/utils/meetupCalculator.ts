@@ -259,6 +259,144 @@ function getGooglePlacesType(activityType: string): string {
   return typeMapping[activityType] || 'restaurant';
 }
 
+// Generate meetup suggestions - UPDATED to handle single user and accept maxResults parameter
+export async function generateMeetupSuggestions(users: User[], maxResults: number = 7): Promise<MeetupSuggestion[]> {
+  const connectedUsers = users.filter(user => user.connected && user.location);
+  
+  if (connectedUsers.length < 1) {
+    throw new Error('Need at least 1 connected user to generate suggestions');
+  }
+
+  console.log('🎯 Generating meetup suggestions for users:', connectedUsers.map(u => ({
+    name: u.name,
+    location: u.location,
+    activity: u.activity
+  })));
+
+  // Calculate the center point (user location for single user, median for multiple)
+  const centerPoint = calculateCentroid(users);
+  console.log('📍 Calculated center point:', centerPoint);
+  
+  // Get preferred activity types
+  const preferredActivities = getPreferredActivityTypes(users);
+  console.log('🎨 Preferred activities:', preferredActivities);
+  
+  const allSuggestions: MeetupSuggestion[] = [];
+  
+  // Use Google Places API if available, otherwise fallback to mock data
+  if (window.google && window.google.maps && window.google.maps.places) {
+    try {
+      const placesService = new google.maps.places.PlacesService(
+        document.createElement('div')
+      );
+      
+      // Calculate suggestions per activity type based on maxResults
+      const suggestionsPerActivity = Math.ceil(maxResults / Math.max(preferredActivities.length + 2, 4)); // +2 for restaurant and cafe fallbacks
+      
+      // Search for places for each preferred activity type
+      for (const activityType of preferredActivities.slice(0, 4)) {
+        const placesForActivity = await searchGooglePlaces(
+          placesService, 
+          centerPoint, 
+          getGooglePlacesType(activityType),
+          activityType,
+          users,
+          suggestionsPerActivity
+        );
+        allSuggestions.push(...placesForActivity);
+      }
+      
+      // Always add restaurants as they're most common meetup spots
+      if (!preferredActivities.includes('restaurant')) {
+        const restaurantPlaces = await searchGooglePlaces(
+          placesService,
+          centerPoint,
+          'restaurant',
+          'restaurant',
+          users,
+          suggestionsPerActivity * 2 // More restaurants
+        );
+        allSuggestions.push(...restaurantPlaces);
+      }
+      
+      // Add cafes as backup option
+      if (!preferredActivities.includes('coffee')) {
+        const cafePlaces = await searchGooglePlaces(
+          placesService,
+          centerPoint,
+          'cafe',
+          'coffee',
+          users,
+          suggestionsPerActivity
+        );
+        allSuggestions.push(...cafePlaces);
+      }
+    } catch (error) {
+      console.error('Google Places API error, falling back to mock data:', error);
+      return generateMockSuggestions(users, centerPoint, preferredActivities, maxResults);
+    }
+  } else {
+    console.log('Google Places API not available, using mock data');
+    return generateMockSuggestions(users, centerPoint, preferredActivities, maxResults);
+  }
+
+  // Remove duplicates based on place ID or name+location
+  const uniqueSuggestions = removeDuplicateSuggestions(allSuggestions);
+
+  // Sort by distance to center point FIRST (closest first), then by rating
+  const sortedSuggestions = uniqueSuggestions
+    .sort((a, b) => {
+      // Primary sort: distance to center point (closest first)
+      const distanceToCenter_A = calculateDistance(
+        centerPoint.lat, centerPoint.lng,
+        a.location.lat, a.location.lng
+      );
+      const distanceToCenter_B = calculateDistance(
+        centerPoint.lat, centerPoint.lng,
+        b.location.lat, b.location.lng
+      );
+      
+      const centerDistanceDiff = distanceToCenter_A - distanceToCenter_B;
+      
+      // If distances to center are very similar (within 500m), prefer higher rating
+      if (Math.abs(centerDistanceDiff) < 0.5) {
+        return b.rating - a.rating;
+      }
+      
+      return centerDistanceDiff;
+    })
+    .slice(0, maxResults); // Return requested number of suggestions
+
+  console.log('✨ Final suggestions (sorted by distance to center):', sortedSuggestions.map(s => ({
+    name: s.name,
+    distanceToCenter: calculateDistance(centerPoint.lat, centerPoint.lng, s.location.lat, s.location.lng).toFixed(2) + 'km',
+    avgDistance: s.averageDistance.toFixed(2) + 'km',
+    rating: s.rating,
+    hasPhoto: !!s.photoUrl
+  })));
+  
+  return sortedSuggestions;
+}
+
+// Remove duplicate suggestions
+function removeDuplicateSuggestions(suggestions: MeetupSuggestion[]): MeetupSuggestion[] {
+  const seen = new Set<string>();
+  const unique: MeetupSuggestion[] = [];
+  
+  for (const suggestion of suggestions) {
+    // Create a unique key based on place ID or name+coordinates
+    const key = suggestion.placeId || 
+                `${suggestion.name.toLowerCase()}-${suggestion.location.lat.toFixed(4)}-${suggestion.location.lng.toFixed(4)}`;
+    
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(suggestion);
+    }
+  }
+  
+  return unique;
+}
+
 // UPDATED: Enhanced place details retrieval to handle deprecated open_now
 async function getPlaceDetails(
   placesService: google.maps.places.PlacesService,
@@ -288,44 +426,24 @@ async function getPlaceDetails(
   });
 }
 
-// Remove duplicate suggestions
-function removeDuplicateSuggestions(suggestions: MeetupSuggestion[]): MeetupSuggestion[] {
-  const seen = new Set<string>();
-  const unique: MeetupSuggestion[] = [];
-  
-  for (const suggestion of suggestions) {
-    // Create a unique key based on place ID or name+coordinates
-    const key = suggestion.placeId || 
-                `${suggestion.name.toLowerCase()}-${suggestion.location.lat.toFixed(4)}-${suggestion.location.lng.toFixed(4)}`;
-    
-    if (!seen.has(key)) {
-      seen.add(key);
-      unique.push(suggestion);
-    }
-  }
-  
-  return unique;
-}
-
-// UPDATED: Search Google Places API with dynamic radius and better batching
+// Search Google Places API - ENHANCED with better photo retrieval and fixed open_now deprecation
 function searchGooglePlaces(
   placesService: google.maps.places.PlacesService,
   location: Location,
   placeType: string,
   activityType: string,
   users: User[],
-  maxResults: number = 10,
-  radiusKm: number = 3 // NEW: Dynamic radius parameter
+  maxResults: number = 10
 ): Promise<MeetupSuggestion[]> {
   return new Promise((resolve) => {
     const request: google.maps.places.PlaceSearchRequest = {
       location: new google.maps.LatLng(location.lat, location.lng),
-      radius: radiusKm * 1000, // Convert km to meters
-      type: placeType as any
-      // Removed openNow to avoid deprecation warning
+      radius: 3000, // 3km radius for suggestions
+      type: placeType as any,
+      openNow: false // Remove this to avoid the deprecated warning
     };
 
-    console.log(`🔍 Searching Google Places for ${placeType} near ${location.lat}, ${location.lng} (radius: ${radiusKm}km)`);
+    console.log(`🔍 Searching Google Places for ${placeType} near ${location.lat}, ${location.lng}`);
 
     placesService.nearbySearch(request, async (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
@@ -404,151 +522,6 @@ function searchGooglePlaces(
       }
     });
   });
-}
-
-// Generate meetup suggestions - UPDATED for better batching and dynamic radius
-export async function generateMeetupSuggestions(users: User[], maxResults: number = 7): Promise<MeetupSuggestion[]> {
-  const connectedUsers = users.filter(user => user.connected && user.location);
-  
-  if (connectedUsers.length < 1) {
-    throw new Error('Need at least 1 connected user to generate suggestions');
-  }
-
-  console.log('🎯 Generating meetup suggestions for users:', connectedUsers.map(u => ({
-    name: u.name,
-    location: u.location,
-    activity: u.activity
-  })));
-
-  // Calculate the center point (user location for single user, median for multiple)
-  const centerPoint = calculateCentroid(users);
-  console.log('📍 Calculated center point:', centerPoint);
-  
-  // Get preferred activity types
-  const preferredActivities = getPreferredActivityTypes(users);
-  console.log('🎨 Preferred activities:', preferredActivities);
-  
-  const allSuggestions: MeetupSuggestion[] = [];
-  
-  // Use Google Places API if available, otherwise fallback to mock data
-  if (window.google && window.google.maps && window.google.maps.places) {
-    try {
-      const placesService = new google.maps.places.PlacesService(
-        document.createElement('div')
-      );
-      
-      // UPDATED: Dynamic radius based on user spread
-      let searchRadius = 3; // Default 3km
-      if (connectedUsers.length > 1) {
-        // Calculate the maximum distance between users to determine search radius
-        let maxUserDistance = 0;
-        for (let i = 0; i < connectedUsers.length; i++) {
-          for (let j = i + 1; j < connectedUsers.length; j++) {
-            const distance = calculateDistance(
-              connectedUsers[i].location!.lat,
-              connectedUsers[i].location!.lng,
-              connectedUsers[j].location!.lat,
-              connectedUsers[j].location!.lng
-            );
-            maxUserDistance = Math.max(maxUserDistance, distance);
-          }
-        }
-        // Set search radius to be 1.5x the max distance between users, with min 3km and max 10km
-        searchRadius = Math.min(Math.max(maxUserDistance * 1.5, 3), 10);
-      }
-      
-      console.log(`🔍 Using search radius: ${searchRadius.toFixed(1)}km`);
-      
-      // Calculate suggestions per activity type based on maxResults
-      const activityTypes = preferredActivities.length > 0 ? preferredActivities : ['restaurant'];
-      const suggestionsPerActivity = Math.ceil(maxResults / Math.max(activityTypes.length + 1, 2)); // +1 for restaurant fallback
-      
-      // Search for places for each preferred activity type
-      for (const activityType of activityTypes.slice(0, 3)) { // Limit to top 3 activities
-        const placesForActivity = await searchGooglePlaces(
-          placesService, 
-          centerPoint, 
-          getGooglePlacesType(activityType),
-          activityType,
-          users,
-          suggestionsPerActivity,
-          searchRadius
-        );
-        allSuggestions.push(...placesForActivity);
-      }
-      
-      // Always add restaurants as they're most common meetup spots
-      if (!preferredActivities.includes('restaurant')) {
-        const restaurantPlaces = await searchGooglePlaces(
-          placesService,
-          centerPoint,
-          'restaurant',
-          'restaurant',
-          users,
-          suggestionsPerActivity * 2, // More restaurants
-          searchRadius
-        );
-        allSuggestions.push(...restaurantPlaces);
-      }
-      
-      // Add cafes as backup option
-      if (!preferredActivities.includes('coffee') && allSuggestions.length < maxResults) {
-        const cafePlaces = await searchGooglePlaces(
-          placesService,
-          centerPoint,
-          'cafe',
-          'coffee',
-          users,
-          suggestionsPerActivity,
-          searchRadius
-        );
-        allSuggestions.push(...cafePlaces);
-      }
-    } catch (error) {
-      console.error('Google Places API error, falling back to mock data:', error);
-      return generateMockSuggestions(users, centerPoint, preferredActivities, maxResults);
-    }
-  } else {
-    console.log('Google Places API not available, using mock data');
-    return generateMockSuggestions(users, centerPoint, preferredActivities, maxResults);
-  }
-
-  // Remove duplicates based on place ID or name+location
-  const uniqueSuggestions = removeDuplicateSuggestions(allSuggestions);
-
-  // Sort by distance to center point FIRST (closest first), then by rating
-  const sortedSuggestions = uniqueSuggestions
-    .sort((a, b) => {
-      // Primary sort: distance to center point (closest first)
-      const distanceToCenter_A = calculateDistance(
-        centerPoint.lat, centerPoint.lng,
-        a.location.lat, a.location.lng
-      );
-      const distanceToCenter_B = calculateDistance(
-        centerPoint.lat, centerPoint.lng,
-        b.location.lat, b.location.lng
-      );
-      
-      const centerDistanceDiff = distanceToCenter_A - distanceToCenter_B;
-      
-      // If distances to center are very similar (within 500m), prefer higher rating
-      if (Math.abs(centerDistanceDiff) < 0.5) {
-        return b.rating - a.rating;
-      }
-      
-      return centerDistanceDiff;
-    })
-    .slice(0, maxResults); // Return requested number of suggestions
-
-  console.log('✨ Final suggestions (sorted by distance to center):', sortedSuggestions.map(s => ({
-    name: s.name,
-    distanceToCenter: calculateDistance(centerPoint.lat, centerPoint.lng, s.location.lat, s.location.lng).toFixed(2) + 'km',
-    avgDistance: s.averageDistance.toFixed(2) + 'km',
-    rating: s.rating,
-    hasPhoto: !!s.photoUrl
-  })));
-  
-  return sortedSuggestions;
 }
 
 // Fallback mock suggestions when Google Places API is not available - UPDATED for single user and maxResults
