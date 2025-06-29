@@ -7,7 +7,7 @@
       :style="{ left: centerPosition.x + 'px', top: centerPosition.y + 'px' }"
     >
       <div
-        class="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 border-4 border-white shadow-2xl cursor-pointer transition-all duration-300 hover:scale-110 flex items-center justify-center"
+        class="w-24 h-24 rounded-full bg-gradient-to-br from-cosmic-500 to-space-600 border-4 border-white shadow-2xl cursor-pointer transition-all duration-300 hover:scale-110 flex items-center justify-center"
         :class="{ 'animate-pulse-glow': canGenerateMeetups }"
         @click="handleCenterNodeClick"
       >
@@ -70,9 +70,7 @@
         <div class="p-6 border-b border-gray-200">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                🎯 Suggested Meetup Locations
-              </h2>
+              <h2 class="text-2xl font-bold text-gray-800 mb-2">🎯 Suggested Meetup Locations</h2>
               <p class="text-gray-600">
                 {{ connectedUsers.length === 1 ? 'Places near your location' : 'Based on everyone\'s preferences and locations' }}
               </p>
@@ -91,7 +89,7 @@
           <div
             v-for="(suggestion, index) in meetupSuggestions"
             :key="suggestion.id"
-            class="bg-white rounded-2xl border border-pink-100 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
+            class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
           >
             <!-- Alternating Layout -->
             <div 
@@ -113,7 +111,7 @@
                 </div>
                 <div 
                   v-else
-                  class="w-full h-full bg-gradient-to-br from-pink-100 to-purple-200 flex items-center justify-center"
+                  class="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center"
                 >
                   <span class="text-3xl">{{ getActivityIcon(suggestion.type) }}</span>
                 </div>
@@ -165,7 +163,7 @@
                   
                   <!-- Action Button -->
                   <button
-                    class="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg hover:from-pink-600 hover:to-purple-600 transition-colors text-xs font-medium"
+                    class="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
                     @click="openInMaps(suggestion)"
                   >
                     View on Map
@@ -187,7 +185,7 @@
             </p>
             <button
               v-if="canGenerateMeetups"
-              class="mt-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+              class="mt-4 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
               @click="generateSuggestions"
               :disabled="store.isLoading"
             >
@@ -196,7 +194,7 @@
           </div>
         </div>
         
-        <div class="px-6 py-4 bg-gradient-to-r from-pink-50 to-purple-50 border-t border-gray-200 flex justify-between items-center">
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
           <div class="text-sm text-gray-600">
             {{ connectedUsers.length === 1 
               ? `Showing ${meetupSuggestions.length} suggestion${meetupSuggestions.length !== 1 ? 's' : ''} near you`
@@ -213,7 +211,7 @@
               🗺️ Check Locations
             </button>
             <button
-              class="bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+              class="bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
               @click="closeMeetupModal"
             >
               Close

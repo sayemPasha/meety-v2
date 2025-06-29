@@ -1,20 +1,14 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-pink-900">
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-space-900 to-cosmic-900">
     <!-- Header -->
     <header class="relative z-30 p-6">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-          <div class="w-16 h-16 flex items-center justify-center">
-            <img 
-              src="/meety-transparent.png" 
-              alt="Meety Logo" 
-              class="w-full h-full object-contain"
-            />
+        <div class="flex items-center space-x-3">
+          <div class="w-12 h-12 bg-gradient-to-br from-stellar-400 to-stellar-600 rounded-full flex items-center justify-center">
+            <span class="text-white text-xl font-bold">M</span>
           </div>
           <div>
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-pink-300 bg-clip-text text-transparent">
-              Meety
-            </h1>
+            <h1 class="text-2xl font-bold text-white">Meety</h1>
             <p class="text-sm text-gray-300">Find the perfect meetup spot</p>
           </div>
         </div>
@@ -33,7 +27,7 @@
           
           <!-- Node Visualization Panel -->
           <div class="lg:col-span-2">
-            <div class="bg-white/10 backdrop-blur-sm border border-pink-200/20 rounded-3xl p-6 shadow-2xl">
+            <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-6 shadow-2xl">
               <div class="node-container relative h-[500px] md:h-[600px]">
                 <NodeVisualization @show-user-setup="showLocationSelector = true" />
               </div>
@@ -44,9 +38,9 @@
           <div class="space-y-6">
             
             <!-- User Status -->
-            <div class="bg-white/10 backdrop-blur-sm border border-pink-200/20 rounded-2xl p-6 shadow-xl">
+            <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 shadow-xl">
               <div class="flex items-center space-x-3 mb-4">
-                <div class="w-10 h-10 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full flex items-center justify-center">
+                <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
                   <span class="text-white">👤</span>
                 </div>
                 <div>
@@ -79,7 +73,7 @@
 
               <button
                 v-if="!currentUser?.connected"
-                class="w-full mt-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+                class="w-full mt-4 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
                 @click="showLocationSelector = true"
               >
                 Set Location & Activity
@@ -90,23 +84,23 @@
             <SharePanel v-if="store.shouldShowShareLink" />
 
             <!-- Instructions -->
-            <div class="bg-white/5 backdrop-blur-sm border border-pink-100/10 rounded-2xl p-6 shadow-xl">
+            <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 shadow-xl">
               <h3 class="font-bold text-lg text-white mb-3">How it works</h3>
               <div class="space-y-3 text-sm text-gray-300">
                 <div class="flex items-start space-x-3">
-                  <span class="text-pink-400 font-bold">1.</span>
+                  <span class="text-stellar-400 font-bold">1.</span>
                   <span>Set your location and preferred activity</span>
                 </div>
                 <div class="flex items-start space-x-3">
-                  <span class="text-pink-400 font-bold">2.</span>
+                  <span class="text-stellar-400 font-bold">2.</span>
                   <span>Share the link with friends to join</span>
                 </div>
                 <div class="flex items-start space-x-3">
-                  <span class="text-pink-400 font-bold">3.</span>
+                  <span class="text-stellar-400 font-bold">3.</span>
                   <span>When everyone's ready, click the center node</span>
                 </div>
                 <div class="flex items-start space-x-3">
-                  <span class="text-pink-400 font-bold">4.</span>
+                  <span class="text-stellar-400 font-bold">4.</span>
                   <span>Get personalized meetup suggestions!</span>
                 </div>
               </div>
@@ -129,7 +123,7 @@
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
     >
       <div class="bg-white rounded-2xl p-8 text-center shadow-2xl">
-        <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-spin">
+        <div class="w-16 h-16 bg-gradient-to-br from-cosmic-500 to-space-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-spin">
           <span class="text-white text-2xl">🌟</span>
         </div>
         <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ loadingMessage }}</h3>
@@ -219,6 +213,6 @@ onUnmounted(() => {
 
 <style scoped>
 .node-container {
-  background: radial-gradient(circle at center, rgba(236, 72, 153, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
 }
 </style>

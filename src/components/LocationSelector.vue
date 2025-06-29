@@ -2,9 +2,7 @@
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl max-w-4xl w-full my-8 shadow-2xl">
       <div class="p-6 border-b border-gray-200">
-        <h2 class="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-2">
-          📍 Select Your Location
-        </h2>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">📍 Select Your Location</h2>
         <p class="text-gray-600">Search for a location or click directly on the map</p>
       </div>
       
@@ -23,10 +21,10 @@
                 ref="searchInput"
                 type="text"
                 placeholder="Search for a location..."
-                class="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-xl shadow-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200"
+                class="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-xl shadow-lg focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200"
               />
               <button
-                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-pink-500 hover:text-pink-600 transition-colors"
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-cosmic-500 hover:text-cosmic-600 transition-colors"
                 @click="getCurrentLocation"
                 title="Use current location"
               >
@@ -60,7 +58,7 @@
         </div>
 
         <!-- Activity Selection Panel -->
-        <div class="lg:w-80 p-6 border-t lg:border-t-0 lg:border-l border-gray-200 bg-gradient-to-br from-pink-50 to-purple-50">
+        <div class="lg:w-80 p-6 border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50">
           <div class="mb-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-3">Preferred Activity</h3>
             <div class="grid grid-cols-2 gap-3">
@@ -73,7 +71,7 @@
                 <div
                   class="border-2 rounded-xl p-3 text-center"
                   :class="selectedActivity === activity.id 
-                    ? 'border-pink-500 bg-pink-50' 
+                    ? 'border-cosmic-500 bg-cosmic-50' 
                     : 'border-gray-200 hover:border-gray-300 bg-white'"
                 >
                   <div class="text-xl mb-1">{{ activity.icon }}</div>
@@ -83,7 +81,7 @@
                 <!-- Selected indicator -->
                 <div
                   v-if="selectedActivity === activity.id"
-                  class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center"
+                  class="absolute -top-2 -right-2 w-5 h-5 bg-cosmic-500 rounded-full flex items-center justify-center"
                 >
                   <span class="text-white text-xs">✓</span>
                 </div>
@@ -104,7 +102,7 @@
       </div>
       
       <!-- Actions -->
-      <div class="px-6 py-4 bg-gradient-to-r from-pink-50 to-purple-50 border-t border-gray-200 flex space-x-3">
+      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex space-x-3">
         <button
           class="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-300 transition-all duration-200"
           @click="$emit('close')"
@@ -112,7 +110,7 @@
           Cancel
         </button>
         <button
-          class="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex-1 bg-gradient-to-r from-cosmic-500 to-space-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="!selectedLocation || !selectedActivity"
           @click="confirmSelection"
         >
@@ -275,7 +273,7 @@ const setSelectedLocation = (location: { lat: number; lng: number; address: stri
       icon: {
         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="16" cy="16" r="12" fill="#ec4899" stroke="white" stroke-width="3"/>
+            <circle cx="16" cy="16" r="12" fill="#3b82f6" stroke="white" stroke-width="3"/>
             <circle cx="16" cy="16" r="4" fill="white"/>
           </svg>
         `),
