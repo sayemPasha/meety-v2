@@ -21,7 +21,8 @@
                 ref="searchInput"
                 type="text"
                 placeholder="Search for a location..."
-                class="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-xl shadow-lg focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                class="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-xl shadow-lg focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200 text-gray-800 placeholder-gray-500"
+                style="color: #1f2937 !important; background-color: #ffffff !important;"
               />
               <button
                 class="absolute right-3 top-1/2 transform -translate-y-1/2 text-cosmic-500 hover:text-cosmic-600 transition-colors"
@@ -68,7 +69,8 @@
                 type="text"
                 placeholder="Enter your name..."
                 maxlength="30"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200 text-gray-800 placeholder-gray-400"
+                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-cosmic-500 focus:border-transparent transition-all duration-200 text-gray-800 placeholder-gray-500"
+                style="color: #1f2937 !important; background-color: #ffffff !important;"
               />
               <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
                 {{ userName.length }}/30
@@ -453,22 +455,33 @@ const emit = defineEmits<{
   border-radius: 2px;
 }
 
-/* Ensure placeholder text is visible */
-input::placeholder {
-  color: #9ca3af !important;
-  opacity: 1;
+/* Enhanced input field styling for better visibility */
+input[type="text"] {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
 }
 
-input::-webkit-input-placeholder {
-  color: #9ca3af !important;
+input[type="text"]::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
 }
 
-input::-moz-placeholder {
-  color: #9ca3af !important;
-  opacity: 1;
+input[type="text"]::-webkit-input-placeholder {
+  color: #6b7280 !important;
 }
 
-input:-ms-input-placeholder {
-  color: #9ca3af !important;
+input[type="text"]::-moz-placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
+
+input[type="text"]:-ms-input-placeholder {
+  color: #6b7280 !important;
+}
+
+/* Ensure text is always visible */
+input[type="text"]:focus {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
 }
 </style>
