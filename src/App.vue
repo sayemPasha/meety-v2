@@ -30,13 +30,12 @@
             href="https://bolt.new" 
             target="_blank" 
             rel="noopener noreferrer"
-            class="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full p-3 hover:bg-white/20 transition-all duration-200"
             title="Built with Bolt.new"
           >
             <img 
               src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/src/public/bolt-badge/white_circle_360x360/white_circle_360x360.png"
               alt="Built with Bolt.new"
-              class="w-8 h-8 object-contain"
+              class="w-12 h-12 object-contain hover:opacity-80 transition-opacity duration-200"
             />
           </a>
         </div>
