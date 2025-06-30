@@ -19,24 +19,24 @@
           </div>
         </div>
         
-        <div v-if="store.currentSession" class="flex items-center space-x-4">
-          <div class="text-right">
+        <div class="flex items-center space-x-4">
+          <div v-if="store.currentSession" class="text-right">
             <div class="text-sm text-gray-300">Session ID</div>
             <div class="text-xs text-gray-400 font-mono">{{ store.currentSession.id.slice(0, 8) }}...</div>
           </div>
           
-          <!-- Bolt Hackathon Badge -->
+          <!-- Bolt Hackathon Badge - Top Right -->
           <a 
-            href="https://github.com/kickiniteasy/bolt-hackathon-badge" 
+            href="https://bolt.new" 
             target="_blank" 
             rel="noopener noreferrer"
-            class="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full p-2 hover:bg-white/20 transition-all duration-200"
-            title="Built with Bolt - Hackathon Badge"
+            class="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full p-3 hover:bg-white/20 transition-all duration-200"
+            title="Built with Bolt.new"
           >
             <img 
               src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/src/public/bolt-badge/white_circle_360x360/white_circle_360x360.png"
-              alt="Bolt Hackathon Badge"
-              class="w-6 h-6 object-contain"
+              alt="Built with Bolt.new"
+              class="w-8 h-8 object-contain"
             />
           </a>
         </div>
