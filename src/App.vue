@@ -36,7 +36,7 @@
             <img 
               src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/src/public/bolt-badge/white_circle_360x360/white_circle_360x360.png"
               alt="Built with Bolt.new"
-              class="w-12 h-12 object-contain"
+              class="w-16 h-16 object-contain"
             />
           </a>
         </div>
