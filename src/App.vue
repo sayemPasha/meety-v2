@@ -31,10 +31,13 @@
             target="_blank" 
             rel="noopener noreferrer"
             class="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/20 transition-all duration-200 group"
+            title="Built with Bolt - Hackathon Badge"
           >
-            <svg class="w-4 h-4 text-blue-400 group-hover:text-blue-300 transition-colors" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13 3L4 14h7v7l9-11h-7V3z"/>
-            </svg>
+            <img 
+              src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/src/public/bolt-badge/white_circle_360x360/white_circle_360x360.png"
+              alt="Bolt Hackathon Badge"
+              class="w-5 h-5 object-contain"
+            />
             <span class="font-medium">Built with Bolt</span>
           </a>
         </div>
