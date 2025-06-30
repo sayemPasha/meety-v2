@@ -30,15 +30,14 @@
             href="https://github.com/kickiniteasy/bolt-hackathon-badge" 
             target="_blank" 
             rel="noopener noreferrer"
-            class="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/20 transition-all duration-200 group"
+            class="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full p-2 hover:bg-white/20 transition-all duration-200"
             title="Built with Bolt - Hackathon Badge"
           >
             <img 
               src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/src/public/bolt-badge/white_circle_360x360/white_circle_360x360.png"
               alt="Bolt Hackathon Badge"
-              class="w-5 h-5 object-contain"
+              class="w-6 h-6 object-contain"
             />
-            <span class="font-medium">Built with Bolt</span>
           </a>
         </div>
       </div>
