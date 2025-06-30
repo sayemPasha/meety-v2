@@ -31,11 +31,12 @@
             target="_blank" 
             rel="noopener noreferrer"
             title="Built with Bolt.new"
+            class="group"
           >
             <img 
               src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/src/public/bolt-badge/white_circle_360x360/white_circle_360x360.png"
               alt="Built with Bolt.new"
-              class="w-12 h-12 object-contain hover:opacity-80 transition-opacity duration-200"
+              class="w-12 h-12 object-contain transition-all duration-300 group-hover:rotate-360"
             />
           </a>
         </div>
@@ -239,5 +240,10 @@ onUnmounted(() => {
 <style scoped>
 .node-container {
   background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+}
+
+/* Custom 360 degree rotation animation */
+.group-hover\:rotate-360 {
+  transform: rotate(360deg);
 }
 </style>
